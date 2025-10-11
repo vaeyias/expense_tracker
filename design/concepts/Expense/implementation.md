@@ -1,4 +1,13 @@
-import { Collection, Db } from "npm:mongodb";
+
+[@concept-design-overview](../../background/concept-design-overview.md)
+
+[@concept-specifications](../../background/concept-specifications.md)
+
+[@implementing-concepts](../../background/implementing-concepts.md)
+
+## AI generated then manually fixed:
+
+```import { Collection, Db } from "npm:mongodb";
 import { Empty, ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 // Declare collection prefix, use concept name
@@ -214,3 +223,4 @@ export default class ExpenseConcept {
     return await this.expenses.findOne({ _id: expenseId });
   }
 }
+```

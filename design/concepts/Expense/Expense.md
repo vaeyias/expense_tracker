@@ -1,0 +1,1 @@
+![concept.8c8b9306](../../../context/design/brainstorming/expense_concept_brainstorm.md/steps/concept.8c8b9306.md)

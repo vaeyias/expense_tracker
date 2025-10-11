@@ -22,7 +22,7 @@ type Expense = ID;
  *   a debtMapping Map<User:Number>
  */
 interface Expenses {
-  _id: Expense;
+  _id: ID;
   title: string;
   description?: string;
   category: string;
