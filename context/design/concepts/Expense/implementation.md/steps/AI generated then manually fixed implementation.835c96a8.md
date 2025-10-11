@@ -1,4 +1,9 @@
-# ExpenseImplementation
+---
+timestamp: 'Sat Oct 11 2025 15:04:34 GMT-0400 (Eastern Daylight Time)'
+parent: '[[..\20251011_150434.42c15cad.md]]'
+content_id: 835c96a87f1ccd786cbc939ad987c833445774113911cb6a47fff510438837b3
+---
+
 # AI generated then manually fixed implementation:
 
 ```import { Collection, Db } from "npm:mongodb";
