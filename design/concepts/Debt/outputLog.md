@@ -1,0 +1,43 @@
+💰 DebtConcept - full workflow and edge cases ...
+  Test Case #1: Full debt workflow ...
+------- output -------
+[1] Creating PersonalDebts between Alice, Bob, Charlie..
+[1] Updating personal debts.. Bob gives Alice 30. Charlie gives Alice 60
+[1] PersonalDebts: Alice owes Bob: 30, Alice owes Charlie: 60
+[1] Updating personal debts.. Alice gives Charlie 60
+[1] PersonalDebts: Alice owes Bob: 30, Alice owes Charlie: 60
+
+
+[1] Creating DebtRecord paid by Alice, total=100, Charlie owes Alice 50
+[1] Created DebtRecord ID: 0199d70a-1362-7525-8d48-ac4304a95191
+[1] PersonalDebts: Alice owes Bob: -20, Alice owes Charlie: 0
+[1] Editing DebtRecord.. totalCost = 120, Bob owes Alice 20,  Charlie owes Alice 100
+[1] Edited DebtRecord ID: 0199d70a-1362-7525-8d48-ac4304a95191
+[1] PersonalDebts: Bob owes Alice: -10, Charlie owes Alice: 100
+
+
+[1] Successfully Deleted DebtRecord
+[1] After deletion, Charlie owes Alice: 0
+----- output end -----
+  Test Case #1: Full debt workflow ... ok (715ms)
+  Test Case #2: Invalid total cost returns error ...
+------- output -------
+[2] Attempted creation with totalCost=0, error: Sum of receiver splits must equal total cost.
+----- output end -----
+  Test Case #2: Invalid total cost returns error ... ok (0ms)
+  Test Case #3: Receivers sum mismatch returns error ...
+------- output -------
+[3] Attempted creation with sum mismatch, error: Sum of receiver splits must equal total cost.
+----- output end -----
+  Test Case #3: Receivers sum mismatch returns error ... ok (1ms)
+  Test Case #4: Editing with negative debt returns error ...
+------- output -------
+[4] Attempted edit with negative debt, error: Debt for user user:Bob cannot be negative
+----- output end -----
+  Test Case #4: Editing with negative debt returns error ... ok (144ms)
+  Test Case #5: Querying non-existent debt ...
+------- output -------
+[5] Querying non-existent debt, error: Personal debt does not exist between these users.
+----- output end -----
+  Test Case #5: Querying non-existent debt ... ok (21ms)
+💰 DebtConcept - full workflow and edge cases ... ok (1s)

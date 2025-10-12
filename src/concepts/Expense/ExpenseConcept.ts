@@ -16,10 +16,7 @@ type Expense = ID;
  *   a category String
  *   a totalCost Number
  *   a date Date
- *   a creator User
- *   a payer User
  *   a group Group
- *   a debtMapping Map<User:Number>
  */
 interface Expenses {
   _id: ID;
@@ -28,10 +25,7 @@ interface Expenses {
   category: string;
   totalCost: number;
   date: Date;
-  creator: User;
-  payer: User;
   group: Group;
-  debtMapping: Record<User, number>; // MongoDB stores maps as nested documents
 }
 
 export default class ExpenseConcept {
@@ -46,50 +40,26 @@ export default class ExpenseConcept {
    * @effects creates an Expense with the given details
    */
   async createExpense({
-    creator,
-    payer,
+    user,
     title,
     category,
     date,
     totalCost,
     description,
     group,
-    debtMapping,
   }: {
-    creator: User;
-    payer: User;
+    user: User;
     title: string;
     category: string;
     date: Date;
     totalCost: number;
     description?: string;
     group: Group;
-    debtMapping: Record<User, number>;
   }): Promise<{ expense: Expense } | { error: string }> {
     // Validation: ensure required fields exist
-    if (!creator) return { error: "creator is required" };
-    if (!payer) return { error: "payer is required" };
+    if (!user) return { error: "user is required" };
+
     if (totalCost <= 0) return { error: "totalCost must be greater than 0" };
-
-    // Validation: all debtMapping amounts are non-negative
-    for (const [user, amount] of Object.entries(debtMapping)) {
-      if (amount < 0) {
-        return { error: `Debt for user ${user} cannot be negative` };
-      }
-    }
-
-    // Validation: sum of debtMapping equals totalCost
-    const totalDebt = Object.values(debtMapping).reduce((a, b) => a + b, 0);
-    if (Math.abs(totalDebt - totalCost) > 0.001) {
-      return {
-        error:
-          `Sum of debtMapping (${totalDebt}) does not equal totalCost (${totalCost})`,
-      };
-    }
-
-    // TODO: validate creator, payer, and all users in debtMapping are in the group
-    // Placeholder for group membership validation
-    // e.g., check against a Group collection if implemented
 
     const newExpenseId = freshID() as Expense;
 
@@ -100,10 +70,7 @@ export default class ExpenseConcept {
       category,
       totalCost,
       date,
-      creator,
-      payer,
       group,
-      debtMapping,
     };
 
     await this.expenses.insertOne(expenseDocument);
@@ -117,24 +84,18 @@ export default class ExpenseConcept {
    */
   async editExpense({
     expenseToEdit,
-    editor,
-    payer,
     title,
     description,
     category,
     totalCost,
     date,
-    debtMapping,
   }: {
     expenseToEdit: Expense;
-    editor: User;
-    payer?: User;
     title?: string;
     description?: string;
     category?: string;
     totalCost?: number;
     date?: Date;
-    debtMapping?: Record<User, number>;
   }): Promise<{ newExpense: Expense } | { error: string }> {
     const updateData: Partial<Expenses> = {};
 
@@ -146,27 +107,7 @@ export default class ExpenseConcept {
       updateData.totalCost = totalCost;
     }
     if (date !== undefined) updateData.date = date;
-    if (payer !== undefined) updateData.payer = payer;
 
-    if (debtMapping !== undefined) {
-      for (const [user, amount] of Object.entries(debtMapping)) {
-        if (amount < 0) {
-          return { error: `Debt for user ${user} cannot be negative` };
-        }
-      }
-      if (totalCost !== undefined) {
-        const totalDebt = Object.values(debtMapping).reduce((a, b) => a + b, 0);
-        if (Math.abs(totalDebt - totalCost) > 0.001) {
-          return {
-            error:
-              `Sum of debtMapping (${totalDebt}) does not equal totalCost (${totalCost})`,
-          };
-        }
-      }
-      updateData.debtMapping = debtMapping;
-    }
-
-    // TODO: validate editor and payer (if changed) are in the group
     const result = await this.expenses.findOneAndUpdate(
       { _id: expenseToEdit },
       { $set: updateData },

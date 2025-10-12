@@ -1,11 +1,8 @@
-[@concept-design-overview](../../background/concept-design-overview.md)
-
-[@concept-specifications](../../background/concept-specifications.md)
-
-[@implementing-concepts](../../background/implementing-concepts.md)
-
-[@concept](Expense.md)
-# implement: Expense
+---
+timestamp: 'Sat Oct 11 2025 23:01:15 GMT-0400 (Eastern Daylight Time)'
+parent: '[[..\20251011_230115.f68ebc42.md]]'
+content_id: 4918af8d65f8ae6d230618657d046f787c1c49ee64022e713c77edcb6b53c52f
+---
 
 # response:
 
