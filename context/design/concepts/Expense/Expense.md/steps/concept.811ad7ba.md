@@ -1,7 +1,7 @@
 ---
-timestamp: 'Sat Oct 11 2025 11:13:13 GMT-0400 (Eastern Daylight Time)'
-parent: '[[..\20251011_111313.299a9687.md]]'
-content_id: 45f634418e232df4c9b8b62320f792d2c10391d17a91e0ca026e5baff7fe6b21
+timestamp: 'Sat Oct 11 2025 20:16:56 GMT-0400 (Eastern Daylight Time)'
+parent: '[[..\20251011_201656.447c98b3.md]]'
+content_id: 811ad7ba4d1ce37670e4897b8e2f95f34366ae47b7dfcbd830ed46651622cb60
 ---
 
 # concept: Expense

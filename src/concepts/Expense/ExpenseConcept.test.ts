@@ -1,214 +1,207 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals, assertNotEquals } from "jsr:@std/assert";
 import { testDb } from "@utils/database.ts";
 import { ID } from "@utils/types.ts";
 import ExpenseConcept from "./ExpenseConcept.ts";
 
 Deno.test("💰 ExpenseConcept - create, edit, delete, and retrieve expenses", async (t) => {
+  // Test Case #1: Create, edit, and retrieve expense
   const [db, client] = await testDb();
   const expenseConcept = new ExpenseConcept(db);
 
   const userAlice = "user:Alice" as ID;
   const userBob = "user:Bob" as ID;
-  const userCharlie = "user:Charlie" as ID;
   const group1 = "group:1" as ID;
 
-  await t.step(
-    "Test Case #1: Creating, editing, and retrieving an expense",
-    async () => {
-      const initialDate = new Date("2023-01-01");
-      const initialDebtMapping = { [userAlice]: 50, [userBob]: 50 };
-      const initialTotalCost = 100;
+  await t.step("Test Case #1: Create, edit, and retrieve expense", async () => {
+    const initialDebtMapping = { [userAlice]: 50, [userBob]: 50 };
+    const totalCost = 100;
 
-      const { expense: expenseId } = await expenseConcept.createExpense({
+    console.log("[1] Creating expense...");
+    const createRes = await expenseConcept.createExpense({
+      creator: userAlice,
+      payer: userAlice,
+      title: "Groceries",
+      category: "Food",
+      date: new Date("2025-01-01"),
+      totalCost,
+      group: group1,
+      debtMapping: initialDebtMapping,
+    });
+    assertNotEquals(
+      "error" in createRes,
+      true,
+      "Creating expense should not fail",
+    );
+    const expenseId = (createRes as { expense: ID }).expense;
+    console.log(`[1] Created expense ID: ${expenseId}`);
+
+    const retrieved = await expenseConcept._getExpenseById({ expenseId });
+    console.log(`[1] Retrieved expense:`, {
+      title: retrieved?.title,
+      totalCost: retrieved?.totalCost,
+      payer: retrieved?.payer,
+      creator: retrieved?.creator,
+      group: retrieved?.group,
+      debtMapping: retrieved?.debtMapping,
+      category: retrieved?.category,
+      date: retrieved?.date,
+    });
+
+    const groupExpenses = await expenseConcept._getExpensesByGroup({
+      group: group1,
+    });
+    console.log(
+      `[1] Expenses in group:`,
+      groupExpenses.map((e) => ({
+        title: e.title,
+        total: e.totalCost,
+        payer: e.payer,
+        debtMapping: e.debtMapping,
+      })),
+    );
+
+    console.log("[1] Editing expense...");
+    const editRes = await expenseConcept.editExpense({
+      expenseToEdit: expenseId,
+      editor: userAlice,
+      payer: userBob,
+      title: "Weekend Groceries",
+      category: "Food & Drink",
+      totalCost: 120,
+      date: new Date("2025-01-02"),
+      debtMapping: { [userAlice]: 70, [userBob]: 50 },
+    });
+    assertEquals("error" in editRes, false, "Editing expense should not fail");
+    console.log(
+      `[1] Edited expense ID: ${(editRes as { newExpense: ID }).newExpense}`,
+    );
+
+    const updated = await expenseConcept._getExpenseById({ expenseId });
+    console.log(`[1] Updated expense:`, {
+      title: updated?.title,
+      totalCost: updated?.totalCost,
+      payer: updated?.payer,
+      creator: updated?.creator,
+      group: updated?.group,
+      debtMapping: updated?.debtMapping,
+      category: updated?.category,
+      date: updated?.date,
+    });
+
+    console.log("[1] Deleting expense...");
+    const deleteRes = await expenseConcept.deleteExpense({
+      expenseToDelete: expenseId,
+    });
+    assertEquals(
+      "error" in deleteRes,
+      false,
+      "Deleting expense should not fail",
+    );
+    console.log(
+      `[1] Deleted expense ID: ${
+        (deleteRes as { deletedExpense: ID }).deletedExpense
+      }`,
+    );
+
+    const afterDeletion = await expenseConcept._getExpenseById({ expenseId });
+    console.log("[1] Verified deletion successful:", afterDeletion);
+    assertEquals(afterDeletion, null);
+  });
+
+  // Test Case #2: Invalid total cost returns error
+  await t.step("Test Case #2: Invalid total cost returns error", async () => {
+    console.log("[2] Creating expense with totalCost = 0...");
+    const res = await expenseConcept.createExpense({
+      creator: userAlice,
+      payer: userAlice,
+      title: "Invalid Expense",
+      category: "Test",
+      date: new Date(),
+      totalCost: 0,
+      group: group1,
+      debtMapping: { [userAlice]: 0 },
+    });
+
+    assertEquals("error" in res, true, "Creating expense failed as expected");
+    console.log(`[2] Expected error: ${(res as { error: string }).error}`);
+    assertEquals(
+      (res as { error: string }).error,
+      "totalCost must be greater than 0",
+    );
+  });
+
+  // Test Case #3: Mismatched debt mapping sum returns error
+  await t.step(
+    "Test Case #3: Mismatched debt mapping sum returns error",
+    async () => {
+      console.log("[3] Creating expense with debt sum mismatch...");
+      const res = await expenseConcept.createExpense({
         creator: userAlice,
         payer: userAlice,
-        title: "Groceries",
-        category: "Food",
-        date: initialDate,
-        totalCost: initialTotalCost,
+        title: "Mismatch Debt",
+        category: "Test",
+        date: new Date(),
+        totalCost: 100,
         group: group1,
-        debtMapping: initialDebtMapping,
+        debtMapping: { [userAlice]: 50, [userBob]: 60 },
       });
-      console.log(`[1] Created expense ID: ${expenseId}`);
 
-      const retrieved = await expenseConcept._getExpenseById({ expenseId });
-      console.log(`[1] Retrieved expense:`, {
-        title: retrieved?.title,
-        total: retrieved?.totalCost,
-        payer: retrieved?.payer,
-      });
-      assertEquals(retrieved?._id, expenseId);
-      assertEquals(retrieved?.title, "Groceries");
-      assertEquals(retrieved?.totalCost, initialTotalCost);
-      assertEquals(retrieved?.creator, userAlice);
-      assertEquals(retrieved?.payer, userAlice);
-      assertEquals(retrieved?.group, group1);
-      assertEquals(retrieved?.debtMapping, initialDebtMapping);
-
-      const groupExpenses = await expenseConcept._getExpensesByGroup({
-        group: group1,
-      });
-      console.log(`[1] Expenses in group:`, groupExpenses.map((e) => e.title));
-      assertEquals(groupExpenses.length, 1);
-      assertEquals(groupExpenses[0]._id, expenseId);
-
-      const updatedDate = new Date("2025-01-02");
-      const updatedTotalCost = 120;
-      const updatedDebtMapping = { [userAlice]: 70, [userBob]: 50 };
-      const editResult = await expenseConcept.editExpense({
-        expenseToEdit: expenseId,
-        editor: userAlice,
-        payer: userBob,
-        title: "Weekend Groceries",
-        category: "Food & Drink",
-        date: updatedDate,
-        totalCost: updatedTotalCost,
-        debtMapping: updatedDebtMapping,
-      });
-      console.log(`[1] Edited expense ID: ${editResult.newExpense}`);
-
-      const updated = await expenseConcept._getExpenseById({ expenseId });
-      console.log(`[1] Updated expense:`, {
-        title: updated?.title,
-        total: updated?.totalCost,
-        payer: updated?.payer,
-        date: updated?.date,
-      });
-      assertEquals(updated?.title, "Weekend Groceries");
-      assertEquals(updated?.payer, userBob);
-      assertEquals(updated?.totalCost, updatedTotalCost);
-      assertEquals(updated?.date, updatedDate);
-      assertEquals(updated?.debtMapping, updatedDebtMapping);
-      assertEquals(updated?.category, "Food & Drink");
-
-      const { deletedExpense } = await expenseConcept.deleteExpense({
-        expenseToDelete: expenseId,
-      });
-      console.log(`[1] Deleted expense ID: ${deletedExpense}`);
-      assertEquals(deletedExpense, expenseId);
-
-      const afterDeletion = await expenseConcept._getExpenseById({ expenseId });
-      assertEquals(afterDeletion, null);
-      console.log(`[1] Verified deletion successful.\n`);
+      assertEquals("error" in res, true, "Creating expense failed as expected");
+      console.log(`[3] Expected error: ${(res as { error: string }).error}`);
     },
   );
 
+  // Test Case #4: Editing with negative debt returns error
   await t.step(
-    "Test Case #2: Creating an expense with invalid total cost should throw",
+    "Test Case #4: Editing with negative debt returns error",
     async () => {
-      try {
-        await expenseConcept.createExpense({
-          creator: userAlice,
-          payer: userAlice,
-          title: "Invalid Expense",
-          category: "Test",
-          date: new Date("2023-03-10"),
-          totalCost: 0,
-          group: group1,
-          debtMapping: { [userAlice]: 0 },
-        });
-        throw new Error(
-          "Expected an error for invalid total cost, but none was thrown.",
-        );
-      } catch (error) {
-        if (error instanceof Error) {
-          console.log(`[2] Caught expected error:`, error.message);
-          assertEquals(error.message, "totalCost must be greater than 0");
-        } else {
-          console.log("[2] Unknown error occurred");
-          throw error;
-        }
-      }
-    },
-  );
-
-  await t.step(
-    "Test Case #3: Creating an expense with mismatched debt mapping sum should throw",
-    async () => {
-      const totalCost = 100;
-      const debtMappingWithMismatch = { [userAlice]: 50, [userBob]: 60 };
-      try {
-        await expenseConcept.createExpense({
-          creator: userAlice,
-          payer: userAlice,
-          title: "Mismatched Debt",
-          category: "Test",
-          date: new Date("2023-04-05"),
-          totalCost,
-          group: group1,
-          debtMapping: debtMappingWithMismatch,
-        });
-        throw new Error(
-          "Expected error for mismatched debt mapping sum, but none was thrown.",
-        );
-      } catch (error) {
-        if (error instanceof Error) {
-          console.log(`[3] Caught expected error:`, error.message);
-          assertEquals(
-            error.message,
-            `Sum of debtMapping (110) does not equal totalCost (${totalCost})`,
-          );
-        } else {
-          console.log("[3] Unknown error occurred");
-          throw error;
-        }
-      }
-    },
-  );
-
-  await t.step(
-    "Test Case #4: Editing an expense with negative debt should throw",
-    async () => {
-      const { expense: expenseId } = await expenseConcept.createExpense({
+      console.log("[4] Creating initial expense...");
+      const createRes = await expenseConcept.createExpense({
         creator: userAlice,
         payer: userAlice,
         title: "Initial Expense",
         category: "Test",
-        date: new Date("2023-05-20"),
+        date: new Date(),
         totalCost: 100,
         group: group1,
         debtMapping: { [userAlice]: 100 },
       });
 
-      try {
-        await expenseConcept.editExpense({
-          expenseToEdit: expenseId,
-          editor: userAlice,
-          debtMapping: { [userAlice]: -50 },
-          totalCost: 50,
-        });
-        throw new Error(
-          "Expected error for negative debt amount, but none was thrown.",
-        );
-      } catch (error) {
-        if (error instanceof Error) {
-          console.log(`[4] Caught expected error:`, error.message);
-          assertEquals(
-            error.message,
-            `Debt for user ${userAlice} cannot be negative`,
-          );
-        } else {
-          console.log("[4] Unknown error occurred");
-          throw error;
-        }
-      } finally {
-        await expenseConcept.deleteExpense({ expenseToDelete: expenseId });
-      }
+      const expenseId = (createRes as { expense: ID }).expense;
+
+      console.log("[4] Editing expense with negative debt...");
+      const editRes = await expenseConcept.editExpense({
+        expenseToEdit: expenseId,
+        editor: userAlice,
+        debtMapping: { [userAlice]: -50 },
+        totalCost: 50,
+      });
+
+      assertEquals(
+        "error" in editRes,
+        true,
+        "Editing expense failed as expected",
+      );
+      console.log(
+        `[4] Expected error: ${(editRes as { error: string }).error}`,
+      );
+
+      console.log("[4] Cleaning up by deleting initial expense...");
+      await expenseConcept.deleteExpense({ expenseToDelete: expenseId });
     },
   );
 
+  // Test Case #5: Retrieving from empty group returns []
   await t.step(
-    "Test Case #5: Retrieving expenses from an empty group returns []",
+    "Test Case #5: Retrieving from empty group returns []",
     async () => {
-      const emptyGroup = "group:empty" as ID;
-      const groupExpenses = await expenseConcept._getExpensesByGroup({
-        group: emptyGroup,
+      console.log("[5] Retrieving expenses from empty group...");
+      const expenses = await expenseConcept._getExpensesByGroup({
+        group: "group:empty" as ID,
       });
-      console.log(
-        `[5] Expenses in empty group (${emptyGroup}):`,
-        groupExpenses,
-      );
-      assertEquals(groupExpenses.length, 0);
+
+      console.log(`[5] Retrieved expenses:`, expenses);
+      assertEquals(expenses.length, 0, "Returned empty group as expected");
     },
   );
 

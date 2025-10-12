@@ -65,25 +65,26 @@ export default class ExpenseConcept {
     description?: string;
     group: Group;
     debtMapping: Record<User, number>;
-  }): Promise<{ expense: Expense }> {
+  }): Promise<{ expense: Expense } | { error: string }> {
     // Validation: ensure required fields exist
-    if (!creator) throw new Error("creator is required");
-    if (!payer) throw new Error("payer is required");
-    if (totalCost <= 0) throw new Error("totalCost must be greater than 0");
+    if (!creator) return { error: "creator is required" };
+    if (!payer) return { error: "payer is required" };
+    if (totalCost <= 0) return { error: "totalCost must be greater than 0" };
 
     // Validation: all debtMapping amounts are non-negative
     for (const [user, amount] of Object.entries(debtMapping)) {
       if (amount < 0) {
-        throw new Error(`Debt for user ${user} cannot be negative`);
+        return { error: `Debt for user ${user} cannot be negative` };
       }
     }
 
     // Validation: sum of debtMapping equals totalCost
     const totalDebt = Object.values(debtMapping).reduce((a, b) => a + b, 0);
     if (Math.abs(totalDebt - totalCost) > 0.001) {
-      throw new Error(
-        `Sum of debtMapping (${totalDebt}) does not equal totalCost (${totalCost})`,
-      );
+      return {
+        error:
+          `Sum of debtMapping (${totalDebt}) does not equal totalCost (${totalCost})`,
+      };
     }
 
     // TODO: validate creator, payer, and all users in debtMapping are in the group
@@ -134,30 +135,32 @@ export default class ExpenseConcept {
     totalCost?: number;
     date?: Date;
     debtMapping?: Record<User, number>;
-  }): Promise<{ newExpense: Expense }> {
+  }): Promise<{ newExpense: Expense } | { error: string }> {
     const updateData: Partial<Expenses> = {};
 
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (category !== undefined) updateData.category = category;
     if (totalCost !== undefined) {
-      if (totalCost <= 0) throw new Error("totalCost must be greater than 0");
+      if (totalCost <= 0) return { error: "totalCost must be greater than 0" };
       updateData.totalCost = totalCost;
     }
     if (date !== undefined) updateData.date = date;
     if (payer !== undefined) updateData.payer = payer;
+
     if (debtMapping !== undefined) {
       for (const [user, amount] of Object.entries(debtMapping)) {
         if (amount < 0) {
-          throw new Error(`Debt for user ${user} cannot be negative`);
+          return { error: `Debt for user ${user} cannot be negative` };
         }
       }
       if (totalCost !== undefined) {
         const totalDebt = Object.values(debtMapping).reduce((a, b) => a + b, 0);
         if (Math.abs(totalDebt - totalCost) > 0.001) {
-          throw new Error(
-            `Sum of debtMapping (${totalDebt}) does not equal totalCost (${totalCost})`,
-          );
+          return {
+            error:
+              `Sum of debtMapping (${totalDebt}) does not equal totalCost (${totalCost})`,
+          };
         }
       }
       updateData.debtMapping = debtMapping;
@@ -173,7 +176,7 @@ export default class ExpenseConcept {
     if (!result) {
       // Handle non-existent expense
       console.error(`Expense with ID ${expenseToEdit} not found for editing.`);
-      return { newExpense: "" as Expense }; // Indicate failure
+      return { error: "Expense not found" };
     }
 
     return { newExpense: result._id };
@@ -187,7 +190,7 @@ export default class ExpenseConcept {
     expenseToDelete,
   }: {
     expenseToDelete: Expense;
-  }): Promise<{ deletedExpense: Expense }> {
+  }): Promise<{ deletedExpense: Expense } | { error: string }> {
     const result = await this.expenses.findOneAndDelete({
       _id: expenseToDelete,
     });
@@ -197,7 +200,7 @@ export default class ExpenseConcept {
       console.error(
         `Expense with ID ${expenseToDelete} not found for deletion.`,
       );
-      return { deletedExpense: "" as Expense }; // Indicate failure
+      return { error: "Expense not found" };
     }
 
     return { deletedExpense: result._id };

@@ -1,7 +1,6 @@
-# Modified_Implementation
-
+# Modified_Implementation_Fix_Errors
 ```
-import { Collection, Db, ObjectId } from "npm:mongodb";
+import { Collection, Db } from "npm:mongodb";
 import { Empty, ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 
@@ -34,9 +33,9 @@ export default class GroupConcept {
    * @param creator The user creating the group.
    * @param name The name of the group.
    * @param description The description of the group.
-   * @returns The ID of the newly created group.
+   * @returns The ID of the newly created group or an error object.
    */
-  createGroup({
+  async createGroup({
     creator,
     name,
     description,
@@ -44,7 +43,12 @@ export default class GroupConcept {
     creator: User;
     name: string;
     description: string;
-  }): { group: Group } {
+  }): Promise<{ group: Group } | { error: string }> {
+    // In a real scenario, you'd also check if 'creator' exists in a User concept.
+    if (!this.userExists(creator)) {
+      return { error: "Creator does not exist." };
+    }
+
     const newGroupId = freshID(); // Using freshID helper for string-based IDs
     const newGroup: Groups = {
       _id: newGroupId,
@@ -54,10 +58,7 @@ export default class GroupConcept {
       members: [creator], // The creator is the first member
     };
 
-    // In a real scenario, you'd also check if 'creator' exists in a User concept.
-    // For simplicity here, we assume it does.
-
-    this.groups.insertOne(newGroup);
+    await this.groups.insertOne(newGroup);
 
     return { group: newGroupId };
   }
@@ -76,26 +77,29 @@ export default class GroupConcept {
     group: Group;
     inviter: User;
     newMember: User;
-  }): Promise<Empty> {
+  }): Promise<Empty | { error: string }> {
     const groupDoc = await this.groups.findOne({ _id: group });
 
     if (!groupDoc) {
-      // In a real scenario, this would be an error return: {error: "Group not found"}
-      // For now, let's assume exceptions for critical data integrity.
-      throw new Error("Group not found.");
+      return { error: "Group not found." };
     }
 
     // Requires: inviter is in group, newMember is not already in group
     if (!groupDoc.members.includes(inviter)) {
-      throw new Error("Inviter is not a member of the group.");
+      console.log("NIT IN GROUP");
+      return { error: "Inviter is not a member of the group." };
     }
     if (groupDoc.members.includes(newMember)) {
-      // In a real scenario, this would be an error return: {error: "User already in group"}
-      throw new Error("New member is already in the group.");
-    }
-    // In a real scenario, you'd also check if 'newMember' exists in a User concept.
+      console.log("ALR");
 
-    this.groups.updateOne(
+      return { error: "New member is already in the group." };
+    }
+    if (!this.userExists(newMember)) {
+      console.log("EXIST");
+      return { error: "New member does not exist." };
+    }
+
+    await this.groups.updateOne(
       { _id: group },
       { $addToSet: { members: newMember } }, // $addToSet ensures uniqueness
     );
@@ -117,27 +121,29 @@ export default class GroupConcept {
     group: Group;
     remover: User;
     member: User;
-  }): Promise<Empty> {
+  }): Promise<Empty | { error: string }> {
     const groupDoc = await this.groups.findOne({ _id: group });
 
     if (!groupDoc) {
-      throw new Error("Group not found.");
+      return { error: "Group not found." };
     }
 
     // Requires: remover and member exist in group
     if (!groupDoc.members.includes(remover)) {
-      throw new Error("Remover is not a member of the group.");
+      return { error: "Remover is not a member of the group." };
     }
     if (!groupDoc.members.includes(member)) {
-      throw new Error("Member to remove is not in the group.");
+      return { error: "Member to remove is not in the group." };
     }
 
     // Prevent removing the last member if it's the creator (optional, but good practice)
     if (member === groupDoc.creator && groupDoc.members.length === 1) {
-      throw new Error("Cannot remove the creator if they are the last member.");
+      return {
+        error: "Cannot remove the creator if they are the last member.",
+      };
     }
 
-    this.groups.updateOne({ _id: group }, { $pull: { members: member } });
+    await this.groups.updateOne({ _id: group }, { $pull: { members: member } });
 
     return {};
   }
@@ -149,26 +155,19 @@ export default class GroupConcept {
    */
   async leaveGroup(
     { group, member }: { group: Group; member: User },
-  ): Promise<Empty> {
+  ): Promise<Empty | { error: string }> {
     const groupDoc = await this.groups.findOne({ _id: group });
 
     if (!groupDoc) {
-      throw new Error("Group not found.");
+      return { error: "Group not found." };
     }
 
     // Requires: member is in the group
     if (!groupDoc.members.includes(member)) {
-      throw new Error("Member is not in the group.");
+      return { error: "Member is not in the group." };
     }
 
-    // Prevent leaving if they are the only member and the creator
-    if (member === groupDoc.creator && groupDoc.members.length === 1) {
-      throw new Error(
-        "Cannot leave if you are the only member and the creator.",
-      );
-    }
-
-    this.groups.updateOne({ _id: group }, { $pull: { members: member } });
+    await this.groups.updateOne({ _id: group }, { $pull: { members: member } });
 
     return {};
   }
@@ -177,19 +176,20 @@ export default class GroupConcept {
    * Deletes a group.
    * @param group The ID of the group to delete.
    */
-  async deleteGroup({ group }: { group: Group }): Promise<Empty> {
-    // Requires: group exists, no members to exist in group
+  async deleteGroup(
+    { group }: { group: Group },
+  ): Promise<Empty | { error: string }> {
     const groupDoc = await this.groups.findOne({ _id: group });
 
     if (!groupDoc) {
-      throw new Error("Group not found.");
+      return { error: "Group not found." };
     }
 
     if (groupDoc.members.length > 0) {
-      throw new Error("Cannot delete a group with active members.");
+      return { error: "Cannot delete a group with active members." };
     }
 
-    this.groups.deleteOne({ _id: group });
+    await this.groups.deleteOne({ _id: group });
 
     return {};
   }
@@ -199,11 +199,13 @@ export default class GroupConcept {
    * @param group The ID of the group.
    * @returns A record containing a set of user IDs (represented as an array).
    */
-  async listMembers({ group }: { group: Group }): Promise<{ members: User[] }> {
+  async listMembers(
+    { group }: { group: Group },
+  ): Promise<{ members: User[] } | { error: string }> {
     const groupDoc = await this.groups.findOne({ _id: group });
 
     if (!groupDoc) {
-      throw new Error("Group not found.");
+      return { error: "Group not found." };
     }
 
     return { members: groupDoc.members };
@@ -232,5 +234,4 @@ export default class GroupConcept {
     return typeof user === "string" && user.length > 0;
   }
 }
-
 ```

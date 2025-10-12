@@ -1,5 +1,3 @@
-# modified_tests
-```
 import { assertEquals, assertExists, assertNotEquals } from "jsr:@std/assert";
 import { testDb } from "@utils/database.ts";
 import { ID } from "@utils/types.ts";
@@ -45,7 +43,7 @@ Deno.test("👥 GroupConcept - operational principle & scenarios", async (t) => 
       });
       assertNotEquals("error" in addRes, true, "Adding user2 should not fail.");
 
-      let membersRes = await groupConcept.listMembers({ group: groupId });
+      let membersRes = await groupConcept._listMembers({ group: groupId });
       assertNotEquals(
         "error" in membersRes,
         true,
@@ -67,7 +65,7 @@ Deno.test("👥 GroupConcept - operational principle & scenarios", async (t) => 
         "Removing user2 should not fail.",
       );
 
-      membersRes = await groupConcept.listMembers({ group: groupId });
+      membersRes = await groupConcept._listMembers({ group: groupId });
       assertNotEquals(
         "error" in membersRes,
         true,
@@ -88,7 +86,7 @@ Deno.test("👥 GroupConcept - operational principle & scenarios", async (t) => 
         "User1 leaving should not fail.",
       );
 
-      membersRes = await groupConcept.listMembers({ group: groupId });
+      membersRes = await groupConcept._listMembers({ group: groupId });
       assertNotEquals(
         "error" in membersRes,
         true,
@@ -269,4 +267,3 @@ Deno.test("👥 GroupConcept - operational principle & scenarios", async (t) => 
 
   await client.close();
 });
-```

@@ -1,13 +1,15 @@
 Based on the feedback from Assignment 2, I  integrated the expense aspects of my PersonalExpenseTracker and GroupExpenseTracker concepts into one Expense concept that keeps track of all expenses. I used an LLM to help with this:
 
-[concept.8c8b9306](../../../context/design/brainstorming/expense_concept_brainstorm.md/steps/concept.8c8b9306.md)
+[LLM Concept](../../../context/design/brainstorming/expense_concept_brainstorm.md/steps/concept.8c8b9306.md)
+
+And then edited the concept manually:
+
+[Modified Concept](../../../context/design/concepts/Expense/Expense.md/steps/concept.811ad7ba.md)
+
 
 Another small change I made from Assignment 2 is I added a creator field to Expenses. Originally, I only included a payer and assumed the creator of the expense was the payer. However, after developing test cases, I decided to allow creators of expenses to designate other users as payers of an expense.
 
-I used LLM to help me implement the concept:
-
-
- However, I quickly noticed that the LLM did not include any validation of the requirements that were specified in the conept specification:
+I used LLM to help me implement the concept, but I noticed that the LLM did not include any validation of the requirements that were specified in the conept specification:
 
  [LLM implementation](../../../context/design/concepts/Expense/implementation.md/steps/response.b69c987d.md)
 
@@ -22,3 +24,9 @@ I used LLM to help me implement the concept:
  So I did some styling changes to make it more readable. I edited some test cases that I thought were not meaningful. Additionally, I noticed the LLM implemented a helper function that was never used so it was removed:
 
 [modified test file](../../../context/design/concepts/Expense/testing.md/steps/_.68ae5135.md)
+
+The last change I made to the implementation and test files were returning errors instead of throwing errors:
+
+[test file](../../../context/design/concepts/Expense/testing.md/steps/_.c2c0de5a.md)
+
+[implementation file](../../../context/design/concepts/Expense/implementation.md/steps/_.7b4475ef.md)
