@@ -1,5 +1,6 @@
 # implementation
-```
+```typescript
+
 import { Collection, Db } from "npm:mongodb";
 import { ID } from "@utils/types.ts"; // Assuming ID is a type alias for string with branding
 import { freshID } from "@utils/database.ts";

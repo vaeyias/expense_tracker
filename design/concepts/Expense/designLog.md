@@ -22,4 +22,4 @@ The last change I made to the implementation and test files were returning error
 After rereading the feedback I got, I realized that I missed a big point in my feedback: it would be better for my Expense concept to have no knowledge of Users and just focus on the item and cost. My Debt concept will take care of cost splitting/debts among users. I had  trouble entirely separating Expenses and Debts because when a user views an expense, the program needs to be able to immediately retrieve the debts/splits associated with an expense.
 
 I revised my concept and implementation with this idea:
-[concept](../../../context/design/concepts/Expense/Expense.md/steps/concept.b47a8368.md), [implementation]()
+[concept](../../../context/design/concepts/Expense/Expense.md/steps/concept.b47a8368.md), [implementation](../../../context/design/concepts/Expense/implementation.md/steps/_.c228a59c.md)
