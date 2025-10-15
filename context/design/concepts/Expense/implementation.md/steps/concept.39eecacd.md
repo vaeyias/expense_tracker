@@ -1,13 +1,15 @@
 ---
-timestamp: 'Sat Oct 11 2025 11:13:13 GMT-0400 (Eastern Daylight Time)'
-parent: '[[..\20251011_111313.299a9687.md]]'
-content_id: 45f634418e232df4c9b8b62320f792d2c10391d17a91e0ca026e5baff7fe6b21
+timestamp: 'Tue Oct 14 2025 22:02:02 GMT-0400 (Eastern Daylight Time)'
+parent: '[[..\20251014_220202.2b5479e0.md]]'
+content_id: 39eecacdec17b143c79533181cd58273a570e2d2329e8ef1b218a5ca969545bf
 ---
 
 # concept: Expense
 
 * **purpose**: Allows users to record, manage, and track expenses.
+
 * **principle**: An expense is created with details like title, payer, and cost. Expenses can be edited or deleted entirely. Each UserSplit represents how much a user owes for a specific expense. This can also be edited or deleted.
+
 * **state**:
   * `a set of Expenses with`
     * `a title String`
@@ -24,21 +26,24 @@ content_id: 45f634418e232df4c9b8b62320f792d2c10391d17a91e0ca026e5baff7fe6b21
     * `an expense Expense` # reference to the Expense
 
 * **actions**:
-  * `createExpense(creator: User, group: Group): (expense: Expense)`
-    * **requires** user exists and is a member in group
-    * **effect** creates an Expense associated with the given group. Expense details are set to default values.
+  * `createExpense(user: User, title: String, category: String, date: Date, totalCost: Number, description: String optional, group: Group, splits:[UserSplits]): (expense: Expense)`
+    * **requires** user exists and is a member in group, totalCost >= 0, amountsOwed in UsersSplits sum to totalCost
+    * **effect** creates an Expense with the given details
+
   * `editExpense(expenseToEdit: Expense, title: String optional, description: String optional, category: String optional, totalCost: Number optional, date: Date optional, splits:[UserSplits]):`
     * **requires** `expenseToEdit` exists, totalCost>=0, amountsOwed in UsersSplits sum to totalCost.
     * **effect** updates the Expense with the given details.
+
   * `deleteExpense(expenseToDelete: Expense): (deletedExpense: Expense)`
     * **requires** `expenseToDelete` exists.
     * **effect** deletes the Expense and associated UserSplits
 
   * `addUserSplit(expense: Expense, user: User, group:Group, amountOwed: Number):`
-    * **requires** `expense` and `user` exist, user in group, `amountOwed` >= 0, split for this user does not exist in expense
+    * **requires** `expense` and `user` exist, user in group, `amountOwed` >= 0
     * **effect** adds a split for the user in the given expense.
+
   * `editUserSplit(expense: Expense, user: User, amountOwed: Number):`
-    * **requires** expense exists, `amountOwed` >= 0, split for the user does not exist in expense
+    * **requires** expense exists, `amountOwed` >= 0
     * **effect** adds a split for the user in the given expense.
 
   * `removeUserSplit(splitToRemove: UserSplit):`

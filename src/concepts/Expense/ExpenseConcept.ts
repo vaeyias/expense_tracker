@@ -1,59 +1,55 @@
 import { Collection, Db } from "npm:mongodb";
-import { Empty, ID } from "@utils/types.ts";
+import { ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
+import { PassThrough } from "node:stream";
 
-// Declare collection prefix, use concept name
-const PREFIX = "Expense" + ".";
+// Declare collection prefixes
+const PREFIX_EXPENSE = "Expense.";
+const PREFIX_USERSPLIT = "UserSplit.";
 
-// Generic types of this concept
+// Generic types
 type User = ID;
 type Group = ID;
 type Expense = ID;
+type UserSplit = ID;
 
-/**
- * a set of Expenses
- *   a title String
- *   a description String (optional)
- *   a category String
- *   a totalCost Number
- *   a date Date
- *   a group Group
- */
+/** Represents a single user’s share in an expense */
+interface UserSplits {
+  _id: UserSplit;
+  user: User;
+  amountOwed: number;
+  expense: Expense;
+}
+
+/** Represents an Expense document */
 interface Expenses {
-  _id: ID;
+  _id: Expense;
   title: string;
   description?: string;
   category: string;
   totalCost: number;
   date: Date;
   group: Group;
-}
-
-/**
- * a set of UserSplits
- *   a user User
- *   a amountOwed Number
- *   an expense Expense # reference to the Expense
- */
-interface UserSplit {
-  _id: ID;
-  user: User;
-  amountOwed: number;
-  expense: Expense;
+  payer: User;
+  userSplits: UserSplit[]; // array of UserSplit IDs
 }
 
 export default class ExpenseConcept {
   expenses: Collection<Expenses>;
-  userSplits: Collection<UserSplit>;
+  userSplits: Collection<UserSplits>;
 
   constructor(private readonly db: Db) {
-    this.expenses = this.db.collection(PREFIX + "expenses");
-    this.userSplits = this.db.collection(PREFIX + "userSplits");
+    this.expenses = this.db.collection(PREFIX_EXPENSE + "expenses");
+    this.userSplits = this.db.collection(PREFIX_USERSPLIT + "usersplits");
   }
 
   /**
-   * @requires user exists and is a member in group, totalCost >= 0, all splits.amountOwed >= 0
-   * @effects creates an Expense with the given details and its UserSplits
+   * @requires user exists and is a member in group, totalCost >= 0, sum of userSplits.amountOwed equals totalCost
+   * @effects creates an Expense with the given details
+   */
+  /**
+   * @requires user exists, totalCost >= 0
+   * @effects creates an Expense with given details and userSplit IDs if valid
    */
   async createExpense({
     user,
@@ -63,7 +59,8 @@ export default class ExpenseConcept {
     totalCost,
     description,
     group,
-    splits = [],
+    payer,
+    userSplits,
   }: {
     user: User;
     title: string;
@@ -72,18 +69,25 @@ export default class ExpenseConcept {
     totalCost: number;
     description?: string;
     group: Group;
-    splits?: { user: User; amountOwed: number }[];
+    payer: User;
+    userSplits?: UserSplit[];
   }): Promise<{ expense: Expense } | { error: string }> {
     if (!user) return { error: "user is required" };
+    if (!payer) return { error: "payer is required" };
+
     if (totalCost < 0) return { error: "totalCost cannot be negative" };
 
-    const totalSplit = splits.reduce((sum, s) => sum + s.amountOwed, 0);
-    if (Math.abs(totalSplit - totalCost) > 0.001) {
-      return { error: "Sum of splits must equal totalCost" };
+    if (userSplits && userSplits.length > 0) {
+      const splits = await this.userSplits
+        .find({ _id: { $in: userSplits } })
+        .toArray();
+      const sum = splits.reduce((acc, s) => acc + s.amountOwed, 0);
+      if (sum !== totalCost) {
+        return { error: "Sum of userSplits amounts must equal totalCost" };
+      }
     }
 
-    const newExpenseId = freshID() as Expense;
-
+    const newExpenseId = (await freshID()) as Expense;
     const expenseDocument: Expenses = {
       _id: newExpenseId,
       title,
@@ -92,30 +96,19 @@ export default class ExpenseConcept {
       totalCost,
       date,
       group,
+      payer,
+      userSplits: userSplits || [],
     };
 
     await this.expenses.insertOne(expenseDocument);
-
-    // Insert UserSplits
-    for (const split of splits) {
-      if (split.amountOwed < 0) {
-        return { error: "split amountOwed cannot be negative" };
-      }
-      await this.userSplits.insertOne({
-        _id: await freshID(),
-        user: split.user,
-        amountOwed: split.amountOwed,
-        expense: newExpenseId,
-      });
-    }
-
     return { expense: newExpenseId };
   }
 
   /**
-   * @requires expenseToEdit exists, totalCost>=0, all numbers in splits.amountOwed >= 0
-   * @effects updates the Expense and optionally replaces its UserSplits
+   * @requires expenseToEdit exists, totalCost >= 0, sum of userSplits.amountOwed equals totalCost
+   * @effects updates the Expense with the given details
    */
+
   async editExpense({
     expenseToEdit,
     title,
@@ -123,7 +116,8 @@ export default class ExpenseConcept {
     category,
     totalCost,
     date,
-    splits,
+    payer,
+    userSplits,
   }: {
     expenseToEdit: Expense;
     title?: string;
@@ -131,9 +125,11 @@ export default class ExpenseConcept {
     category?: string;
     totalCost?: number;
     date?: Date;
-    splits?: { user: User; amountOwed: number }[];
+    payer?: User;
+    userSplits?: UserSplit[];
   }): Promise<{ newExpense: Expense } | { error: string }> {
     const updateData: Partial<Expenses> = {};
+
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (category !== undefined) updateData.category = category;
@@ -142,6 +138,22 @@ export default class ExpenseConcept {
       updateData.totalCost = totalCost;
     }
     if (date !== undefined) updateData.date = date;
+    if (payer !== undefined) updateData.payer = payer;
+
+    if (userSplits !== undefined) {
+      const splits = await this.userSplits
+        .find({ _id: { $in: userSplits } })
+        .toArray();
+      const targetTotal = totalCost ??
+        (await this.expenses.findOne({ _id: expenseToEdit }))?.totalCost;
+      if (targetTotal === undefined) return { error: "Expense not found" };
+      const sum = splits.reduce((acc, s) => acc + s.amountOwed, 0);
+      if (sum !== targetTotal) {
+        return { error: "Sum of userSplits amounts must equal totalCost" };
+      }
+
+      updateData.userSplits = userSplits;
+    }
 
     const result = await this.expenses.findOneAndUpdate(
       { _id: expenseToEdit },
@@ -150,37 +162,12 @@ export default class ExpenseConcept {
     );
 
     if (!result) return { error: "Expense not found" };
-
-    // Update UserSplits if provided
-    if (splits) {
-      const totalSplit = splits.reduce((sum, s) => sum + s.amountOwed, 0);
-      if (totalCost !== undefined && Math.abs(totalSplit - totalCost) > 0.001) {
-        return { error: "Sum of splits must equal totalCost" };
-      }
-
-      // Remove existing splits
-      await this.userSplits.deleteMany({ expense: expenseToEdit });
-
-      // Insert new splits
-      for (const split of splits) {
-        if (split.amountOwed < 0) {
-          return { error: "split amountOwed cannot be negative" };
-        }
-        await this.userSplits.insertOne({
-          _id: await freshID(),
-          user: split.user,
-          amountOwed: split.amountOwed,
-          expense: expenseToEdit,
-        });
-      }
-    }
-
-    return { newExpense: result._id };
+    return { newExpense: expenseToEdit };
   }
 
   /**
    * @requires expenseToDelete exists
-   * @effects deletes the Expense and all associated UserSplits
+   * @effects deletes expense
    */
   async deleteExpense({
     expenseToDelete,
@@ -193,15 +180,12 @@ export default class ExpenseConcept {
 
     if (!result) return { error: "Expense not found" };
 
-    // Remove all associated UserSplits
-    await this.userSplits.deleteMany({ expense: expenseToDelete });
-
     return { deletedExpense: result._id };
   }
 
   /**
-   * @requires expense exists, amountOwed >= 0
-   * @effects adds a split for the user in the given expense
+   * @requires expense exists, amountOwed>=0, user does not have a userSplit in the expense already
+   * @effects adds a user split to the expense and returns its ID
    */
   async addUserSplit({
     expense,
@@ -211,85 +195,117 @@ export default class ExpenseConcept {
     expense: Expense;
     user: User;
     amountOwed: number;
-  }): Promise<{ split: UserSplit } | { error: string }> {
-    if (amountOwed < 0) return { error: "amountOwed cannot be negative" };
+  }): Promise<{ userSplit: UserSplit } | { error: string }> {
+    if (amountOwed < 0) return { error: "amountOwed must be >= 0" };
+
     const expenseExists = await this.expenses.findOne({ _id: expense });
     if (!expenseExists) return { error: "Expense not found" };
 
-    const split: UserSplit = {
-      _id: await freshID(),
+    const existingSplit = await this.userSplits.findOne({
+      expense: expense,
+      user,
+    });
+    if (existingSplit) {
+      return { error: "User already has a split in this expense" };
+    }
+    const splitId = (await freshID()) as UserSplit;
+    await this.userSplits.insertOne({
+      _id: splitId,
       user,
       amountOwed,
       expense,
-    };
-    await this.userSplits.insertOne(split);
-    return { split };
+    });
+
+    return { userSplit: splitId };
   }
 
   /**
-   * @requires expense and user exist in UserSplit, amountOwed >= 0
-   * @effects updates the UserSplit with the new amountOwed
+   * @requires userSplit exists
+   * @effects adds a user split to the expense and returns its ID
    */
   async editUserSplit({
-    expense,
+    userSplit,
     user,
     amountOwed,
   }: {
-    expense: Expense;
-    user: User;
-    amountOwed: number;
-  }): Promise<{ split: UserSplit } | { error: string }> {
-    if (amountOwed < 0) return { error: "amountOwed cannot be negative" };
+    userSplit: UserSplit;
+    user?: User;
+    amountOwed?: number;
+  }): Promise<{ userSplit: UserSplit } | { error: string }> {
+    const updateData: Partial<UserSplits> = {};
+    if (amountOwed !== undefined) updateData.amountOwed = amountOwed;
+    if (amountOwed !== undefined && amountOwed < 0) {
+      return { error: "amountOwed must be >= 0" };
+    }
+    const userSplitRes = await this.userSplits.findOne({ _id: userSplit });
+    if (!userSplitRes) return { error: "User Split not found" };
+
+    // Check if there's already a split with this user in the same expense
+    if (user !== undefined) {
+      const existingSplit = await this.userSplits.findOne({
+        expense: userSplitRes.expense,
+        user: user,
+      });
+
+      if (existingSplit) {
+        return { error: "User already has a split in this expense" };
+      }
+      updateData.user = user;
+    }
+
     const result = await this.userSplits.findOneAndUpdate(
-      { expense, user },
-      { $set: { amountOwed } },
+      { _id: userSplit },
+      { $set: updateData },
       { returnDocument: "after" },
     );
-    if (!result) return { error: "UserSplit not found" };
-    return { split: result };
+
+    if (!result) return { error: "User Split not found" };
+    return { userSplit: result._id };
   }
 
   /**
-   * @requires splitToRemove exists
-   * @effects deletes the UserSplit
+   * @requires expense exists, amountOwed>=0
+   * @effects removes a user split from the expense
    */
   async removeUserSplit({
-    splitToRemove,
+    expense,
+    userSplit,
   }: {
-    splitToRemove: ID;
-  }): Promise<Empty | { error: string }> {
-    const result = await this.userSplits.deleteOne({ _id: splitToRemove });
-    if (result.deletedCount === 0) return { error: "UserSplit not found" };
+    expense: Expense;
+    userSplit: UserSplit;
+  }): Promise<{} | { error: string }> {
+    const result = await this.expenses.updateOne(
+      { _id: expense },
+      { $pull: { userSplits: userSplit } },
+    );
+    if (result.matchedCount === 0) return { error: "Expense not found" };
+    await this.userSplits.deleteOne({ _id: userSplit });
     return {};
   }
 
-  // Queries
-
-  /**
-   * @requires group exists
-   * @effects returns all expenses in the group
-   */
+  // Internal queries
   async _getExpensesByGroup({ group }: { group: Group }): Promise<Expenses[]> {
     return await this.expenses.find({ group }).toArray();
   }
 
-  /**
-   * @requires expenseId exists
-   * @effects returns the expense document or null if not found
-   */
   async _getExpenseById(
     { expenseId }: { expenseId: Expense },
   ): Promise<Expenses | null> {
     return await this.expenses.findOne({ _id: expenseId });
   }
 
+  async _getUserSplitById(
+    { userSplit }: { userSplit: UserSplit },
+  ): Promise<UserSplits | null> {
+    return await this.userSplits.findOne({ _id: userSplit });
+  }
+
   /**
-   * @requires expense exists
-   * @effects returns all UserSplits for the expense
+   * @requires valid expense ID
+   * @effects returns all user splits associated with the given expense
    */
-  async _getSplitsByExpense(
-    { expense }: { expense: Expense },
-  ): Promise<UserSplit[]> {
-    return await this.userSplits.find({ expense }).toArray();
+  async _getSplitsByExpense({ expenseId }: { expenseId: ID }) {
+    const splits = await this.userSplits.find({ expense: expenseId }).toArray();
+    return { splits };
   }
 }

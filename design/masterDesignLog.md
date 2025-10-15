@@ -64,3 +64,5 @@ This is my concept and implementation after:
 
 **Debt Design Simplification**
 After implementing my initial design of Debt concept, I found that handling the receiversSplit map<receiver,amount_owed> was quite complex. Then, I realized that concept actions should only have primitive arguments and return types. So, I modified the DebtRecord state and associated actions to only store the payer, receiver, the amount the receiver recieved, and a reference to the transaction. Then I realized that this is quite similar to my PersonalDebt state of the Debt concept.
+
+**LLM Implementing an entirely different concept:* [response](../context/design/concepts/Expense/implementation.md/steps/_.a511614a.md)

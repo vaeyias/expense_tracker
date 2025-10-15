@@ -2,207 +2,321 @@ import { assertEquals, assertNotEquals } from "jsr:@std/assert";
 import { testDb } from "@utils/database.ts";
 import { ID } from "@utils/types.ts";
 import ExpenseConcept from "./ExpenseConcept.ts";
+import { WithId } from "npm:mongodb";
 
-Deno.test("💰 ExpenseConcept - create, edit, delete, and retrieve expenses", async (t) => {
-  // Test Case #1: Create, edit, and retrieve expense
+Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) => {
   const [db, client] = await testDb();
   const expenseConcept = new ExpenseConcept(db);
 
   const userAlice = "user:Alice" as ID;
+  const userBob = "user:Bob" as ID;
   const group1 = "group:1" as ID;
 
-  await t.step("Test Case #1: Create, edit, and retrieve expense", async () => {
-    const totalCost = 100;
+  const printExpenseDetails = async (expenseId: ID) => {
+    const expense = await expenseConcept._getExpenseById({ expenseId });
+    if (!expense) {
+      console.log(`Expense ${expenseId} not found`);
+      return;
+    }
+    console.log(
+      `Expense Details: title=${expense.title}, totalCost=$${expense.totalCost}, numSplits=${expense.userSplits.length}`,
+    );
 
-    console.log("[1] Creating expense...");
-    const createRes = await expenseConcept.createExpense({
+    if (expense.userSplits.length > 0) {
+      console.log("   ↳ User Splits:");
+      for (const splitId of expense.userSplits) {
+        const split = await expenseConcept._getUserSplitById({
+          userSplit: splitId,
+        });
+        console.log(
+          `      user=${split?.user}, amount=$${split?.amountOwed}`,
+        );
+      }
+    }
+  };
+
+  // --------------------------------------------------
+  await t.step(
+    "Test Case #1: Full Expense Lifecycle",
+    async () => {
+      console.log(
+        "\n[1.1] Creating an initial expense...",
+      );
+      const createExpenseRes = await expenseConcept.createExpense({
+        user: userAlice,
+        title: "Picnic",
+        category: "Leisure",
+        date: new Date(),
+        totalCost: 0,
+        group: group1,
+        payer: userAlice,
+      });
+      assertNotEquals(
+        "error" in createExpenseRes,
+        true,
+        (createExpenseRes as { error: string }).error,
+      );
+      const expenseId = (createExpenseRes as { expense: ID }).expense;
+      console.log(`[1.1] ✅ Created expense ID: ${expenseId}`);
+      await printExpenseDetails(expenseId);
+
+      console.log(
+        "[1.2] Alice's split for this expense is $10, creating her split...",
+      );
+      const aliceSplitRes = await expenseConcept.addUserSplit({
+        expense: expenseId,
+        user: userAlice,
+        amountOwed: 10,
+      });
+      assertNotEquals(
+        "error" in aliceSplitRes,
+        true,
+        (aliceSplitRes as { error: string }).error,
+      );
+      const aliceSplitId = (aliceSplitRes as { userSplit: ID }).userSplit;
+      console.log(`[1.2] ✅ Alice split ID: ${aliceSplitId}`);
+
+      console.log(
+        "[1.3] Bob's split for this expense is $40, creating this split...",
+      );
+      const bobSplitRes = await expenseConcept.addUserSplit({
+        expense: expenseId,
+        user: userBob,
+        amountOwed: 40,
+      });
+      assertNotEquals("error" in bobSplitRes, true);
+      const bobSplitId = (bobSplitRes as { userSplit: ID }).userSplit;
+      console.log(`[1.3] ✅ Bob split ID: ${bobSplitId}`);
+
+      console.log(
+        "[1.4] Updating expense to with both splits and totalCost = $50...",
+      );
+      const editExpenseRes = await expenseConcept.editExpense({
+        expenseToEdit: expenseId,
+        totalCost: 50,
+        userSplits: [aliceSplitId, bobSplitId],
+      });
+      assertEquals("error" in editExpenseRes, false);
+      console.log(`[1.4] ✅ Edited expense successfully`);
+      await printExpenseDetails(expenseId);
+
+      console.log("[1.5] Deleting Alice's split...");
+      const removeAliceRes = await expenseConcept.removeUserSplit({
+        expense: expenseId,
+        userSplit: aliceSplitId,
+      });
+      assertEquals("error" in removeAliceRes, false);
+      console.log(`[1.5] ✅ Removed Alice split ID: ${aliceSplitId}`);
+      await printExpenseDetails(expenseId);
+
+      console.log("[1.6] Editing Bob's split to $50...");
+      const editBobSplitRes = await expenseConcept.editUserSplit({
+        userSplit: bobSplitId,
+        amountOwed: 50,
+      });
+      assertEquals("error" in editBobSplitRes, false);
+      console.log(`[1.6] ✅ Bob split updated`);
+      await printExpenseDetails(expenseId);
+
+      console.log("[1.7] Deleting expense...");
+      const deleteExpenseRes = await expenseConcept.deleteExpense({
+        expenseToDelete: expenseId,
+      });
+      assertEquals("error" in deleteExpenseRes, false);
+      console.log(
+        `[1.7] Deleted expense ID: ${
+          (deleteExpenseRes as { deletedExpense: ID }).deletedExpense
+        }`,
+      );
+    },
+  );
+
+  // --------------------------------------------------
+  await t.step("Test Case #2: Invalid Splits", async () => {
+    console.log("\n[2.1] Creating an expense...");
+    const createExpenseRes = await expenseConcept.createExpense({
       user: userAlice,
-      title: "Groceries",
-      category: "Food",
-      date: new Date("2025-01-01"),
-      totalCost,
+      title: "Invalid Split Test",
+      category: "Test",
+      date: new Date(),
+      totalCost: 10,
       group: group1,
+      payer: userAlice,
     });
-    assertNotEquals(
-      "error" in createRes,
-      true,
-      "Creating expense should not fail",
-    );
-    const expenseId = (createRes as { expense: ID }).expense;
-    console.log(`[1] Created expense ID: ${expenseId}`);
+    const expenseId = (createExpenseRes as { expense: ID }).expense;
+    console.log(`[2.1] ✅ Created expense ID: ${expenseId}`);
 
-    const retrieved = await expenseConcept._getExpenseById({ expenseId });
-    console.log(`[1] Retrieved expense by Id:`, {
-      title: retrieved?.title,
-      totalCost: retrieved?.totalCost,
-      group: retrieved?.group,
-      category: retrieved?.category,
-      date: retrieved?.date,
+    console.log("[2.2] Trying to add a negative split...");
+    const negSplitRes = await expenseConcept.addUserSplit({
+      expense: expenseId,
+      user: userAlice,
+      amountOwed: -5,
     });
-
-    const groupExpenses = await expenseConcept._getExpensesByGroup({
-      group: group1,
-    });
-
+    assertEquals("error" in negSplitRes, true);
     console.log(
-      `[1] Retrieving Expenses by Group:`,
-      groupExpenses.map((e) => ({
-        title: e.title,
-        total: e.totalCost,
-      })),
-    );
-
-    console.log("[1] Editing expense...");
-    const editRes = await expenseConcept.editExpense({
-      expenseToEdit: expenseId,
-      title: "Weekend Groceries",
-      category: "Food & Drink",
-      totalCost: 120,
-      date: new Date("2025-01-02"),
-    });
-    assertEquals("error" in editRes, false, "Editing expense should not fail");
-    console.log(
-      `[1] Edited expense ID: ${(editRes as { newExpense: ID }).newExpense}`,
-    );
-
-    const updated = await expenseConcept._getExpenseById({ expenseId });
-    console.log(`[1] Updated expense:`, {
-      title: updated?.title,
-      totalCost: updated?.totalCost,
-      group: updated?.group,
-      category: updated?.category,
-      date: updated?.date,
-    });
-
-    console.log("[1] Deleting expense...");
-    const deleteRes = await expenseConcept.deleteExpense({
-      expenseToDelete: expenseId,
-    });
-    assertEquals(
-      "error" in deleteRes,
-      false,
-      "Deleting expense should not fail",
-    );
-    console.log(
-      `[1] Deleted expense ID: ${
-        (deleteRes as { deletedExpense: ID }).deletedExpense
+      `[2.2] Got error as expected: ${
+        (negSplitRes as { error: string }).error
       }`,
     );
 
-    const afterDeletion = await expenseConcept._getExpenseById({ expenseId });
-    console.log("[1] Verified deletion successful:", afterDeletion);
-    assertEquals(afterDeletion, null);
-  });
-
-  // Test Case #2: Invalid total cost returns error
-  await t.step("Test Case #2: Invalid total cost returns error", async () => {
-    console.log("[2] Creating expense with totalCost = -5 ...");
-    const res = await expenseConcept.createExpense({
+    console.log("[2.3] Creating a split in the expense for Alice...");
+    const validSplitRes = await expenseConcept.addUserSplit({
+      expense: expenseId,
       user: userAlice,
-      title: "Invalid Expense",
-      category: "Test",
-      date: new Date(),
-      totalCost: -5,
-      group: group1,
+      amountOwed: 10,
     });
+    const aliceSplitId = (validSplitRes as { userSplit: ID }).userSplit;
+    console.log(`[2.3] ✅ Alice's split created: ${aliceSplitId}`);
 
-    assertEquals("error" in res, true, "Creating expense should have failed");
-    console.log(`[2] Expected error: ${(res as { error: string }).error}`);
-    assertEquals(
-      (res as { error: string }).error,
-      "totalCost must be greater than 0",
+    console.log(
+      "[2.3] Updating expense with split and totalCost = $10...",
+    );
+    const editExpenseRes = await expenseConcept.editExpense({
+      expenseToEdit: expenseId,
+      totalCost: 10,
+      userSplits: [aliceSplitId],
+    });
+    assertEquals("error" in editExpenseRes, false);
+    await printExpenseDetails(expenseId);
+
+    console.log(
+      "[2.4] Trying to add another split for Alice to the same expense...",
+    );
+    const duplicateSplitRes = await expenseConcept.addUserSplit({
+      expense: expenseId,
+      user: userAlice,
+      amountOwed: 10,
+    });
+    assertEquals("error" in duplicateSplitRes, true);
+    console.log(
+      `[2.4] Got error as expected: ${
+        (duplicateSplitRes as { error: string }).error
+      }`,
     );
   });
 
-  // Test Case #3: Retrieving from empty group returns []
-  await t.step(
-    "Test Case #3: Retrieving from empty group returns []",
-    async () => {
-      console.log("[3] Retrieving expenses from empty group...");
-      const expenses = await expenseConcept._getExpensesByGroup({
-        group: "group:empty" as ID,
-      });
+  // --------------------------------------------------
+  await t.step("Test Case #3: Invalid Expenses", async () => {
+    console.log("\n[3.1] Creating expense with two splits...");
+    const createExpenseRes = await expenseConcept.createExpense({
+      user: userAlice,
+      title: "Invalid Expense Test",
+      category: "Test",
+      date: new Date(),
+      totalCost: 50,
+      group: group1,
+      payer: userAlice,
+    });
+    const expenseId = (createExpenseRes as { expense: ID }).expense;
 
-      console.log(`[3] Retrieved expenses:`, expenses);
-      assertEquals(expenses.length, 0, "Returned empty group as expected");
-    },
-  );
+    const aliceSplit = (await expenseConcept.addUserSplit({
+      expense: expenseId,
+      user: userAlice,
+      amountOwed: 20,
+    })) as { userSplit: ID };
+    const bobSplit = (await expenseConcept.addUserSplit({
+      expense: expenseId,
+      user: userBob,
+      amountOwed: 30,
+    })) as { userSplit: ID };
 
-  // Test Case #4: Performing Multiple Edits
-  await t.step(
-    "Test Case #4: Many Edits",
-    async () => {
-      console.log("[4] Creating initial expense...");
-      const createRes = await expenseConcept.createExpense({
-        user: userAlice,
-        title: "Initial Expense",
-        category: "Test",
-        date: new Date(),
-        totalCost: 50,
-        group: group1,
-      });
+    await expenseConcept.editExpense({
+      expenseToEdit: expenseId,
+      totalCost: 50,
+      userSplits: [aliceSplit.userSplit, bobSplit.userSplit],
+    });
+    await printExpenseDetails(expenseId);
 
-      const expenseId = (createRes as { expense: ID }).expense;
+    console.log(
+      "[3.2] Trying to edit totalCost to 60 (splits don't add up to 60)...",
+    );
+    const invalidTotalEdit = await expenseConcept.editExpense({
+      expenseToEdit: expenseId,
+      totalCost: 60,
+      userSplits: [aliceSplit.userSplit, bobSplit.userSplit],
+    });
+    assertEquals("error" in invalidTotalEdit, true);
+    console.log(
+      `[3.2] Got error as expected: ${
+        (invalidTotalEdit as { error: string }).error
+      }`,
+    );
 
-      const original = await expenseConcept._getExpenseById({ expenseId });
-      console.log(`[4] Updated expense:`, {
-        title: original?.title,
-        totalCost: original?.totalCost,
-        group: original?.group,
-        category: original?.category,
-        date: original?.date,
-      });
+    console.log(
+      "[3.3] Trying to remove Bob's split while keeping totalCost=50...",
+    );
+    const invalidSplitEdit = await expenseConcept.editExpense({
+      expenseToEdit: expenseId,
+      totalCost: 50,
+      userSplits: [aliceSplit.userSplit],
+    });
+    assertEquals("error" in invalidSplitEdit, true);
+    console.log(
+      `[3.3] Got error as expected: ${
+        (invalidSplitEdit as { error: string }).error
+      }`,
+    );
+  });
 
-      console.log("[4] Editing expense with negative cost...");
-      const editRes = await expenseConcept.editExpense({
-        expenseToEdit: expenseId,
-        totalCost: -50,
-      });
+  // --------------------------------------------------
+  await t.step("Test Case #4: Querying Data", async () => {
+    console.log("\n[4.1] Creating expense with two splits...");
+    const createExpenseRes = await expenseConcept.createExpense({
+      user: userAlice,
+      title: "Query Test",
+      category: "Test",
+      date: new Date(),
+      totalCost: 50,
+      group: group1,
+      payer: userAlice,
+    });
 
-      assertEquals(
-        "error" in editRes,
-        true,
-        "Editing expense failed as expected",
-      );
+    const expenseId = (createExpenseRes as { expense: ID }).expense;
+
+    const bobSplit = await expenseConcept.addUserSplit({
+      expense: expenseId,
+      user: userBob,
+      amountOwed: 20,
+    });
+
+    const aliceSplit = await expenseConcept.addUserSplit({
+      expense: expenseId,
+      user: userAlice,
+      amountOwed: 30,
+    });
+
+    await expenseConcept.editExpense({
+      expenseToEdit: expenseId,
+      totalCost: 50,
+      userSplits: [
+        (bobSplit as { userSplit: ID }).userSplit,
+        (aliceSplit as { userSplit: ID }).userSplit,
+      ],
+    });
+
+    await printExpenseDetails(expenseId);
+
+    console.log("[4.2] Getting expenses by group...");
+    const groupExpenses = await expenseConcept._getExpensesByGroup({
+      group: group1,
+    });
+    console.log(
+      `[4.2] ✅ Group ${group1} has ${groupExpenses.length} expenses`,
+    );
+
+    assertEquals(Array.isArray(groupExpenses), true);
+    console.log("[4.3] Getting splits by expense ID...");
+    const expenseData = await expenseConcept._getSplitsByExpense({ expenseId });
+
+    assertNotEquals(expenseData, null);
+    if (expenseData) {
       console.log(
-        `[4] Expected error: ${(editRes as { error: string }).error}`,
+        `[4.3] ✅ Retrieved splits for expense:`,
+        expenseData?.splits.map((
+          s: { user: ID; amountOwed: number; _id: ID },
+        ) => ({ user: s.user, amountOwed: s.amountOwed, id: s._id })),
       );
-
-      console.log("[4] Editing expense with new title and cost...");
-      const editRes2 = await expenseConcept.editExpense({
-        expenseToEdit: expenseId,
-        title: "Edit two",
-        totalCost: 150,
-      });
-
-      assertEquals(
-        "error" in editRes2,
-        false,
-        "Editing expense should not fail",
-      );
-      console.log(
-        `[4] Edited expense ID: ${(editRes2 as { newExpense: ID }).newExpense}`,
-      );
-
-      const updated = await expenseConcept._getExpenseById({ expenseId });
-      console.log(`[4] Initial expense:`, {
-        title: updated?.title,
-        totalCost: updated?.totalCost,
-        group: updated?.group,
-        category: updated?.category,
-        date: updated?.date,
-      });
-
-      assertEquals(
-        "error" in editRes,
-        true,
-        "Editing expense failed as expected",
-      );
-
-      console.log("[4] Cleaning up by deleting initial expense...");
-      await expenseConcept.deleteExpense({ expenseToDelete: expenseId });
-    },
-  );
-
+    }
+  });
   await client.close();
 });

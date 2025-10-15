@@ -176,7 +176,7 @@ Deno.test("💵 DebtConcept - full workflow and edge cases", async (t) => {
     });
     assertEquals("error" in res2, true);
     console.log(
-      `[3] Trying to update non-existent debt between Bob and Charlie, got error: ${
+      `[3] Updating non-existent debt between Bob and Charlie, got error as expected: ${
         (res as { error: string }).error
       }`,
     );
