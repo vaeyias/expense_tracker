@@ -3,44 +3,47 @@ import { testDb } from "@utils/database.ts";
 import { ID } from "@utils/types.ts";
 import DebtConcept from "./DebtConcept.ts";
 
-Deno.test("💰 DebtConcept - full workflow and edge cases", async (t) => {
+Deno.test("💵 DebtConcept - full workflow and edge cases", async (t) => {
   const [db, client] = await testDb();
   const debtConcept = new DebtConcept(db);
 
   const alice = "user:Alice" as ID;
   const bob = "user:Bob" as ID;
   const charlie = "user:Charlie" as ID;
-  const expense = "expense:1" as ID;
 
-  // Test Case #1: Create, edit, retrieve, and delete a debt record
+  // Test Case #1: Create, update, and retrieve debts between users
   await t.step("Test Case #1: Full debt workflow", async () => {
-    console.log("[1] Creating PersonalDebts between Alice, Bob, Charlie..");
-    const aliceBobDebtRes = await debtConcept.createPersonalDebt({
+    console.log("[1] Creating Debts between Alice, Bob, Charlie...");
+    const aliceBobDebtRes = await debtConcept.createDebt({
       userA: alice,
       userB: bob,
     });
 
-    const charlieAliceDebtRes = await debtConcept.createPersonalDebt({
+    const charlieAliceDebtRes = await debtConcept.createDebt({
       userA: charlie,
       userB: alice,
     });
 
-    const bobCharlieDebtRes = await debtConcept.createPersonalDebt({
+    const bobCharlieDebtRes = await debtConcept.createDebt({
       userA: bob,
       userB: charlie,
     });
 
+    assertNotEquals("error" in aliceBobDebtRes, true);
+    assertNotEquals("error" in charlieAliceDebtRes, true);
+    assertNotEquals("error" in bobCharlieDebtRes, true);
+
     console.log(
-      "[1] Updating personal debts.. Bob gives Alice 30. Charlie gives Alice 60",
+      "[1] Updating debts.. Bob gives Alice 30. Charlie gives Alice 60",
     );
 
-    await debtConcept.updatePersonalDebt({
+    await debtConcept.updateDebt({
       payer: bob,
       receiver: alice,
       amount: 30,
     });
 
-    await debtConcept.updatePersonalDebt({
+    await debtConcept.updateDebt({
       payer: charlie,
       receiver: alice,
       amount: 60,
@@ -55,96 +58,10 @@ Deno.test("💰 DebtConcept - full workflow and edge cases", async (t) => {
       userB: charlie,
     });
     console.log(
-      `[1] PersonalDebts: Alice owes Bob: ${
+      `[1] Debts: Alice owes Bob: ${
         (aliceBobDebt as { balance: number }).balance
       }, Alice owes Charlie: ${
         (aliceCharlieDebt as { balance: number }).balance
-      }`,
-    );
-
-    console.log(
-      "[1] Updating personal debts.. Alice gives Charlie 60",
-    );
-
-    await debtConcept.updatePersonalDebt({
-      payer: alice,
-      receiver: charlie,
-      amount: 60,
-    });
-
-    aliceCharlieDebt = await debtConcept.getDebt({
-      userA: alice,
-      userB: charlie,
-    });
-
-    console.log(
-      `[1] PersonalDebts: Alice owes Bob: ${
-        (aliceBobDebt as { balance: number }).balance
-      }, Alice owes Charlie: ${
-        (aliceCharlieDebt as { balance: number }).balance
-      }`,
-    );
-
-    assertEquals((aliceBobDebt as { balance: number }).balance, 30);
-    assertEquals((aliceCharlieDebt as { balance: number }).balance, 0);
-
-    console.log("\n");
-    const createRes = await debtConcept.createDebtRecord({
-      payer: alice,
-      totalCost: 100,
-      receiversSplit: { [bob]: 50, [alice]: 50 },
-      expenseId: expense,
-    });
-    assertNotEquals(
-      "error" in createRes,
-      true,
-      "DebtRecord creation should succeed",
-    );
-    const debtId = (createRes as { debtRecord: { _id: ID } }).debtRecord._id;
-    console.log(
-      `[1] Creating DebtRecord paid by Alice, total=100, Charlie owes Alice 50`,
-    );
-    console.log(
-      `[1] Created DebtRecord ID: ${
-        (createRes as { debtRecord: { _id: ID } }).debtRecord._id
-      }`,
-    );
-
-    aliceBobDebt = await debtConcept.getDebt({
-      userA: alice,
-      userB: bob,
-    });
-    aliceCharlieDebt = await debtConcept.getDebt({
-      userA: alice,
-      userB: charlie,
-    });
-    console.log(
-      `[1] PersonalDebts: Alice owes Bob: ${
-        (aliceBobDebt as { balance: number }).balance
-      }, Alice owes Charlie: ${
-        (aliceCharlieDebt as { balance: number }).balance
-      }`,
-    );
-    assertEquals((aliceBobDebt as { balance: number }).balance, -20);
-    assertEquals((aliceCharlieDebt as { balance: number }).balance, 0);
-
-    const editRes = await debtConcept.editDebtRecord({
-      debtRecordId: debtId,
-      totalCost: 120,
-      receiversSplit: { [bob]: 20, [charlie]: 100 },
-    });
-    assertEquals(
-      "error" in editRes,
-      false,
-      "Editing DebtRecord should succeed",
-    );
-    console.log(
-      `[1] Editing DebtRecord.. totalCost = 120, Bob owes Alice 20,  Charlie owes Alice 100`,
-    );
-
-    console.log(
-      `[1] Edited DebtRecord ID: ${
-        (editRes as { debtRecord: { _id: ID } }).debtRecord._id
       }`,
     );
 
@@ -156,115 +73,113 @@ Deno.test("💰 DebtConcept - full workflow and edge cases", async (t) => {
       userA: charlie,
       userB: alice,
     });
+
     console.log(
-      `[1] PersonalDebts: Bob owes Alice: ${
+      `[1] Checking directionality... Bob owes Alice: ${
         (aliceBobDebt as { balance: number }).balance
       }, Charlie owes Alice: ${
         (aliceCharlieDebt as { balance: number }).balance
       }`,
     );
-    assertEquals((aliceBobDebt as { balance: number }).balance, -10);
-    assertEquals((aliceCharlieDebt as { balance: number }).balance, 100);
-    console.log("\n");
-    const deleteRes = await debtConcept.deleteDebtRecord({
-      debtRecordId: debtId,
-    });
-    assertEquals(
-      "error" in deleteRes,
-      false,
-      "Deleting DebtRecord should succeed",
-    );
-    console.log(
-      `[1] Successfully Deleted DebtRecord`,
-    );
 
-    const afterDelete = await debtConcept.getDebt({
-      userA: charlie,
-      userB: alice,
-    });
-    console.log(
-      `[1] After deletion, Charlie owes Alice: ${
-        (afterDelete as { balance: number }).balance
-      }`,
-    );
-    assertEquals((afterDelete as { balance: number }).balance, 0);
-  });
+    assertEquals((aliceBobDebt as { balance: number }).balance, -30);
+    assertEquals((aliceCharlieDebt as { balance: number }).balance, -60);
 
-  // Test Case #2: Invalid total cost should return error
-  await t.step("Test Case #2: Invalid total cost returns error", async () => {
-    const res = await debtConcept.createDebtRecord({
+    console.log("[1] Updating debts.. Alice gives Charlie back 100");
+    await debtConcept.updateDebt({
       payer: alice,
-      totalCost: -5,
-      receiversSplit: { [bob]: 0 },
-      expenseId: expense,
+      receiver: charlie,
+      amount: 100,
     });
+
+    aliceCharlieDebt = await debtConcept.getDebt({
+      userA: alice,
+      userB: charlie,
+    });
+
+    aliceBobDebt = await debtConcept.getDebt({
+      userA: alice,
+      userB: bob,
+    });
+
     console.log(
-      `[2] Attempted creation with totalCost=0, error: ${
-        (res as { error: string }).error
+      `[1] Debts: Alice owes Bob: ${
+        (aliceBobDebt as { balance: number }).balance
+      }, Alice owes Charlie: ${
+        (aliceCharlieDebt as { balance: number }).balance
       }`,
     );
-    assertEquals("error" in res, true);
+
+    assertEquals((aliceBobDebt as { balance: number }).balance, 30);
+    assertEquals((aliceCharlieDebt as { balance: number }).balance, -40);
   });
 
-  // Test Case #3: Receivers sum mismatch returns error
+  // Test Case #2: Creating duplicate debt returns error
   await t.step(
-    "Test Case #3: Receivers sum mismatch returns error",
+    "Test Case #2: Creating Duplicate Debts and Deleting Debts",
     async () => {
-      const res = await debtConcept.createDebtRecord({
-        payer: alice,
-        totalCost: 100,
-        receiversSplit: { [bob]: 60, [charlie]: 50 },
-        expenseId: expense,
+      const duplicate = await debtConcept.createDebt({
+        userA: bob,
+        userB: alice,
       });
       console.log(
-        `[3] Attempted creation with sum mismatch, error: ${
-          (res as { error: string }).error
+        `[2] Attempted duplicate debt creation (userA: bob, userB: alice), got an error as expected: ${
+          (duplicate as { error: string }).error
         }`,
       );
-      assertEquals("error" in res, true);
+      assertEquals("error" in duplicate, true);
+
+      console.log(`[2] Deleting Alice and Bob's debt...`);
+      await debtConcept.deleteDebt({ userA: alice, userB: bob });
+      console.log(
+        `[2] Attempting to create a debt between Alice and Bob again...`,
+      );
+      const newDebt = await debtConcept.createDebt({
+        userA: bob,
+        userB: alice,
+      });
+
+      assertEquals("error" in newDebt, false);
+
+      const initialBalance = await debtConcept.getDebt({
+        userA: bob,
+        userB: alice,
+      });
+
+      console.log(
+        `[2] Successfully created debt: Bob owes Alice: ${
+          (initialBalance as { balance: number }).balance
+        }`,
+      );
     },
   );
 
-  // Test Case #4: Editing DebtRecord with negative amounts returns error
-  await t.step(
-    "Test Case #4: Editing with negative debt returns error",
-    async () => {
-      const createRes = await debtConcept.createDebtRecord({
-        payer: alice,
-        totalCost: 50,
-        receiversSplit: { [bob]: 50 },
-        expenseId: expense,
-      });
-      const debtId = (createRes as { debtRecord: { _id: ID } }).debtRecord._id;
-
-      const editRes = await debtConcept.editDebtRecord({
-        debtRecordId: debtId,
-        totalCost: 50,
-        receiversSplit: { [bob]: -10, [alice]: 60 },
-      });
-      console.log(
-        `[4] Attempted edit with negative debt, error: ${
-          (editRes as { error: string }).error
-        }`,
-      );
-      assertEquals("error" in editRes, true);
-
-      await debtConcept.deleteDebtRecord({ debtRecordId: debtId });
-    },
-  );
-
-  // Test Case #5: Querying non-existent debt returns error
-  await t.step("Test Case #5: Querying non-existent debt", async () => {
+  // Test Case #3: Querying, Updating non-existent debt returns error
+  await t.step("Test Case #3: Querying non-existent debt", async () => {
     const res = await debtConcept.getDebt({
       userA: alice,
       userB: "user:Unknown" as ID,
     });
     console.log(
-      `[5] Querying non-existent debt, error: ${
+      `[3] Querying non-existent debt returns error as expected: ${
         (res as { error: string }).error
       }`,
     );
     assertEquals("error" in res, true);
+
+    await debtConcept.deleteDebt({ userA: charlie, userB: bob });
+    console.log(`[3] Deleting debt between Bob and Charlie...`);
+    const res2 = await debtConcept.updateDebt({
+      payer: charlie,
+      receiver: bob,
+      amount: 20,
+    });
+    assertEquals("error" in res2, true);
+    console.log(
+      `[3] Trying to update non-existent debt between Bob and Charlie, got error: ${
+        (res as { error: string }).error
+      }`,
+    );
   });
 
   await client.close();

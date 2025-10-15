@@ -145,7 +145,7 @@ Deno.test("💰 ExpenseConcept - create, edit, delete, and retrieve expenses", a
       const expenseId = (createRes as { expense: ID }).expense;
 
       const original = await expenseConcept._getExpenseById({ expenseId });
-      console.log(`[1] Updated expense:`, {
+      console.log(`[4] Updated expense:`, {
         title: original?.title,
         totalCost: original?.totalCost,
         group: original?.group,

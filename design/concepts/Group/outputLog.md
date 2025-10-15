@@ -1,3 +1,4 @@
+# group_output_log
 ```
 running 1 test from ./src/concepts/Group/GroupConcept.test.ts
 👥 GroupConcept - operational principle & scenarios ...
