@@ -87,7 +87,7 @@
     - [test-template](../context/design/background/test-template.md/steps/_.c1a67ee1.md)
     - [generated test code using template](../context/design/concepts/Folder/testing.md/steps/file.56ee342f.md)
 
-
+---
 ### 6. Simplifying `Expense` actions with a Two-Step Flow
 - A problem I encountered was figuring out a way to validate that all the splits of an expense added up to the totalCost of an expense without passing complex objects or lists into my createExpense/editExpense actions.
 - My solution was to make `createExpense` initialize an empty Expense (with default details like totalCost=0, userSplits=[]), and then use `addUserSplit` and `removeUserSplit` actions to update it.
