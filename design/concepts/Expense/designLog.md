@@ -1,25 +1,14 @@
 # Expense Design Log
 
 ## Draft #1: Expense with Users
-Based on the feedback from Assignment 2, I merged the expense aspects of my PersonalExpenseTracker and GroupExpenseTracker concepts into one Expense concept that keeps track of all expenses. I used an LLM to help with this:
+Based on the feedback from Assignment 2, I merged the expense aspects of my PersonalExpenseTracker and GroupExpenseTracker concepts into one Expense concept that keeps track of all expenses. This made my concepts a lot cleaner and modular because PersonalExpenseTracker and GroupExpenseTracker shared a lot of similar ideas. I used an LLM to help with this:
  [LLM Concept](../../../context/design/brainstorming/expense_concept_brainstorm.md/steps/concept.8c8b9306.md)
 -> [Manually Modified Concept](../../../context/design/concepts/Expense/Expense.md/steps/concept.811ad7ba.md)
 
-I then used LLM to help me implement the concept, but I noticed that the LLM did not include any validation of the requirements that were specified in the conept specification:
-[LLM implementation](../../../context/design/concepts/Expense/implementation.md/steps/response.b69c987d.md) ->
-[Manually Fixed Implementation](../../../context/design/concepts/Expense/implementation.md/steps/_.79e37ee7.md)
-
-
-Then, generated a test file: [LLM Test File](../../../context/design/concepts/Expense/testing.md/steps/response.3c927e51.md)
-
-I did some styling changes to make it more readable. I edited some test cases that I thought were not meaningful. Additionally, I noticed the LLM implemented a helper function that was never used so it was removed: [modified test file](../../../context/design/concepts/Expense/testing.md/steps/_.68ae5135.md)
-
-The last change I made to the implementation and test files were returning errors instead of throwing errors:
-[test file](../../../context/design/concepts/Expense/testing.md/steps/_.c2c0de5a.md), [implementation file](../../../context/design/concepts/Expense/implementation.md/steps/_.7b4475ef.md)
 
 ## Draft #2: Expense WITHOUT Users
 
-I got feedback on Assignment 2 that said it would be better for my Expense concept to have no knowledge of Users and just focus on the item and cost. So, my Debt concept will take care of cost splitting/debts among users.
+I also got feedback on Assignment 2 that said it would be better for my Expense concept to have no knowledge of Users and just focus on the item and cost. The feedback said that my Debt concept should take care of cost splitting/debts among users. So, I removed the cost splitting logic from my Expense concept.
 
 I revised my concept and implementation with this idea:
 [concept](../../../context/design/concepts/Expense/Expense.md/steps/concept.b47a8368.md), [implementation](../../../context/design/concepts/Expense/implementation.md/steps/_.c228a59c.md)
@@ -29,7 +18,7 @@ As I implemented Debt and Expense, I felt like the cost splitting idea heavily r
 
 [concept draft #3](../../../context/design/concepts/Expense/Expense.md/steps/concept.9a4d8404.md)
 
-## Validating that UserSplits add up to totalCost of an Expense
+## Problem: Validating that UserSplits add up to totalCost of an Expense
 - A problem I encountered was figuring out a way to validate that all the splits of an expense added up to the totalCost of an expense without passing complex objects or lists into my createExpense/editExpense actions.
 - My solution was to make `createExpense` initialize an empty Expense (with default details like totalCost=0, userSplits=[]), and then use `addUserSplit` and `removeUserSplit` actions to update it.
 - Validation now happens in `editExpense`, where I check that all userSplits add up to the totalCost of the Expense

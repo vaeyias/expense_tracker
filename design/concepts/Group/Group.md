@@ -5,10 +5,11 @@ concept Group
     principle users can create groups, add users to groups, remove users from groups, and leave groups.
     state
         a set of Groups with
+            an id ID
             a name String
             a description String
             a creator User
-            a set of Users
+            a members set of Users
 
     actions
         createGroup(creator: User, name: String, description: String): (group: Group)
@@ -31,7 +32,7 @@ concept Group
             requires group exists, no members to exist in group
             effect group is deleted
 
-        listMembers(group: Group): (members: Set<User>)
+        _listMembers(group: Group): (members: Set<User>)
             requires group exists
             effect returns all users in the group
 ```

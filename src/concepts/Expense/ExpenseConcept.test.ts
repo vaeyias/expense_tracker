@@ -40,7 +40,7 @@ Deno.test("--------------- 💰 ExpenseConcept - create, edit, validate, and que
     "Test Case #1: Full Expense Lifecycle",
     async () => {
       console.log(
-        "\n[1.1] Creating an initial expense...",
+        "\n[1.1] Creating an initial expense (default values)...",
       );
       const createExpenseRes = await expenseConcept.createExpense({
         user: userAlice,
@@ -52,11 +52,10 @@ Deno.test("--------------- 💰 ExpenseConcept - create, edit, validate, and que
         (createExpenseRes as { error: string }).error,
       );
       const expenseId = (createExpenseRes as { expense: ID }).expense;
-      console.log(`[1.1] ✅ Created expense ID: ${expenseId}`);
       await printExpenseDetails(expenseId);
 
       console.log(
-        "[1.2] Alice's split for this expense is $10, creating her split...",
+        "[1.2] Alice's split for this expense is $10, adding her split...",
       );
       const aliceSplitRes = await expenseConcept.addUserSplit({
         expense: expenseId,
@@ -69,10 +68,9 @@ Deno.test("--------------- 💰 ExpenseConcept - create, edit, validate, and que
         (aliceSplitRes as { error: string }).error,
       );
       const aliceSplitId = (aliceSplitRes as { userSplit: ID }).userSplit;
-      console.log(`[1.2] ✅ Alice split ID: ${aliceSplitId}`);
 
       console.log(
-        "[1.3] Bob's split for this expense is $40, creating this split...",
+        "[1.3] Bob's split for this expense is $40, adding this split...",
       );
       const bobSplitRes = await expenseConcept.addUserSplit({
         expense: expenseId,
@@ -81,13 +79,13 @@ Deno.test("--------------- 💰 ExpenseConcept - create, edit, validate, and que
       });
       assertNotEquals("error" in bobSplitRes, true);
       const bobSplitId = (bobSplitRes as { userSplit: ID }).userSplit;
-      console.log(`[1.3] ✅ Bob split ID: ${bobSplitId}`);
 
       console.log(
-        "[1.4] Updating expense to with both splits and totalCost = $50...",
+        "[1.4] Updating expense with both splits and totalCost = $50...",
       );
       const editExpenseRes = await expenseConcept.editExpense({
         expenseToEdit: expenseId,
+        title: "Groceries Week 2",
         totalCost: 50,
       });
       assertEquals("error" in editExpenseRes, false);
@@ -148,7 +146,7 @@ Deno.test("--------------- 💰 ExpenseConcept - create, edit, validate, and que
       }`,
     );
 
-    console.log("[2.3] Creating a split in the expense for Alice...");
+    console.log("[2.3] Creating a $10 split in the expense for Alice...");
     const validSplitRes = await expenseConcept.addUserSplit({
       expense: expenseId,
       user: userAlice,

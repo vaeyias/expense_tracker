@@ -24,7 +24,7 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
         name: "Root",
       });
       assertNotEquals("error" in rootRes, true, (rootRes as any).error);
-      console.log(`Created root folder for ${owner}`);
+      console.log(`Created root folder for ${owner} using createFolder action`);
     }
   }
 
