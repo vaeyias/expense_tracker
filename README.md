@@ -1,9 +1,9 @@
 # Index
 
-**Interesting Moments and Major Design Changes:**
+### **Interesting Moments and Major Design Changes:**
 - [Main Design Document](design/designDoc.md)
 
-**Design Logs for Specific Concepts**
+### **Design Logs for Specific Concepts**
 
 - [Expense Design Log](concepts/Expense/designLog.md)
 
