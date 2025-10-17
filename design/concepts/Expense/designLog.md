@@ -19,7 +19,20 @@ The last change I made to the implementation and test files were returning error
 
 ## Draft #2: Expense WITHOUT Users
 
-After rereading the feedback I got, I realized that I missed a big point in my feedback: it would be better for my Expense concept to have no knowledge of Users and just focus on the item and cost. My Debt concept will take care of cost splitting/debts among users. I had  trouble entirely separating Expenses and Debts because when a user views an expense, the program needs to be able to immediately retrieve the debts/splits associated with an expense.
+I got feedback on Assignment 2 that said it would be better for my Expense concept to have no knowledge of Users and just focus on the item and cost. So, my Debt concept will take care of cost splitting/debts among users.
 
 I revised my concept and implementation with this idea:
 [concept](../../../context/design/concepts/Expense/Expense.md/steps/concept.b47a8368.md), [implementation](../../../context/design/concepts/Expense/implementation.md/steps/_.c228a59c.md)
+
+## Draft #3: Expense WITH Cost Splitting and Users
+As I implemented Debt and Expense, I felt like the cost splitting idea heavily relied on/related to the Expense concept and less related to Debt. After getting some more help with my concepts in Office Hours, I reasoned that it would be better to have Expense concept handle cost splitting and Debt just handle Debts between two users. However, unlike Draft #1, the Expense concept will store a set of Expenses and a set of UserSplits to avoid passing in a Map type into the actions (this map was called debtMapping and mapped the user to their split of the expense in Draft #1). This set of UserSplits made my concept a lot cleaner. Additionally, my Debt and Expense concepts were a lot more modular now with cost splitting handled in Expense:
+
+[concept draft #3](../../../context/design/concepts/Expense/Expense.md/steps/concept.9a4d8404.md)
+
+## Validating that UserSplits add up to totalCost of an Expense
+- A problem I encountered was figuring out a way to validate that all the splits of an expense added up to the totalCost of an expense without passing complex objects or lists into my createExpense/editExpense actions.
+- My solution was to make `createExpense` initialize an empty Expense (with default details like totalCost=0, userSplits=[]), and then use `addUserSplit` and `removeUserSplit` actions to update it.
+- Validation now happens in `editExpense`, where I check that all userSplits add up to the totalCost of the Expense
+- This design simplification resolved both technical complexity and type-safety issues while preserving validation logic.
+  - [Expense concept before](../context/design/concepts/Expense/Expense.md/steps/concept.d9175486.md)
+  - [Expense concept after](../context/design/concepts/Expense/Expense.md/steps/concept.4c331251.md)

@@ -4,7 +4,7 @@ import { ID } from "@utils/types.ts";
 import ExpenseConcept from "./ExpenseConcept.ts";
 import { WithId } from "npm:mongodb";
 
-Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) => {
+Deno.test("--------------- 💰 ExpenseConcept - create, edit, validate, and query 💰 ---------------", async (t) => {
   const [db, client] = await testDb();
   const expenseConcept = new ExpenseConcept(db);
 
@@ -44,12 +44,7 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
       );
       const createExpenseRes = await expenseConcept.createExpense({
         user: userAlice,
-        title: "Picnic",
-        category: "Leisure",
-        date: new Date(),
-        totalCost: 0,
         group: group1,
-        payer: userAlice,
       });
       assertNotEquals(
         "error" in createExpenseRes,
@@ -94,7 +89,6 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
       const editExpenseRes = await expenseConcept.editExpense({
         expenseToEdit: expenseId,
         totalCost: 50,
-        userSplits: [aliceSplitId, bobSplitId],
       });
       assertEquals("error" in editExpenseRes, false);
       console.log(`[1.4] ✅ Edited expense successfully`);
@@ -136,12 +130,7 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
     console.log("\n[2.1] Creating an expense...");
     const createExpenseRes = await expenseConcept.createExpense({
       user: userAlice,
-      title: "Invalid Split Test",
-      category: "Test",
-      date: new Date(),
-      totalCost: 10,
       group: group1,
-      payer: userAlice,
     });
     const expenseId = (createExpenseRes as { expense: ID }).expense;
     console.log(`[2.1] ✅ Created expense ID: ${expenseId}`);
@@ -174,7 +163,6 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
     const editExpenseRes = await expenseConcept.editExpense({
       expenseToEdit: expenseId,
       totalCost: 10,
-      userSplits: [aliceSplitId],
     });
     assertEquals("error" in editExpenseRes, false);
     await printExpenseDetails(expenseId);
@@ -200,30 +188,24 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
     console.log("\n[3.1] Creating expense with two splits...");
     const createExpenseRes = await expenseConcept.createExpense({
       user: userAlice,
-      title: "Invalid Expense Test",
-      category: "Test",
-      date: new Date(),
-      totalCost: 50,
       group: group1,
-      payer: userAlice,
     });
     const expenseId = (createExpenseRes as { expense: ID }).expense;
 
-    const aliceSplit = (await expenseConcept.addUserSplit({
+    await expenseConcept.addUserSplit({
       expense: expenseId,
       user: userAlice,
       amountOwed: 20,
-    })) as { userSplit: ID };
-    const bobSplit = (await expenseConcept.addUserSplit({
+    });
+    const bobSplit = await expenseConcept.addUserSplit({
       expense: expenseId,
       user: userBob,
       amountOwed: 30,
-    })) as { userSplit: ID };
+    });
 
     await expenseConcept.editExpense({
       expenseToEdit: expenseId,
       totalCost: 50,
-      userSplits: [aliceSplit.userSplit, bobSplit.userSplit],
     });
     await printExpenseDetails(expenseId);
 
@@ -233,7 +215,6 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
     const invalidTotalEdit = await expenseConcept.editExpense({
       expenseToEdit: expenseId,
       totalCost: 60,
-      userSplits: [aliceSplit.userSplit, bobSplit.userSplit],
     });
     assertEquals("error" in invalidTotalEdit, true);
     console.log(
@@ -245,10 +226,13 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
     console.log(
       "[3.3] Trying to remove Bob's split while keeping totalCost=50...",
     );
+    await expenseConcept.removeUserSplit({
+      expense: expenseId,
+      userSplit: (bobSplit as { userSplit: ID }).userSplit,
+    });
     const invalidSplitEdit = await expenseConcept.editExpense({
       expenseToEdit: expenseId,
       totalCost: 50,
-      userSplits: [aliceSplit.userSplit],
     });
     assertEquals("error" in invalidSplitEdit, true);
     console.log(
@@ -263,23 +247,18 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
     console.log("\n[4.1] Creating expense with two splits...");
     const createExpenseRes = await expenseConcept.createExpense({
       user: userAlice,
-      title: "Query Test",
-      category: "Test",
-      date: new Date(),
-      totalCost: 50,
       group: group1,
-      payer: userAlice,
     });
 
     const expenseId = (createExpenseRes as { expense: ID }).expense;
 
-    const bobSplit = await expenseConcept.addUserSplit({
+    await expenseConcept.addUserSplit({
       expense: expenseId,
       user: userBob,
       amountOwed: 20,
     });
 
-    const aliceSplit = await expenseConcept.addUserSplit({
+    await expenseConcept.addUserSplit({
       expense: expenseId,
       user: userAlice,
       amountOwed: 30,
@@ -288,10 +267,6 @@ Deno.test("💰 ExpenseConcept - create, edit, validate, and query", async (t) =
     await expenseConcept.editExpense({
       expenseToEdit: expenseId,
       totalCost: 50,
-      userSplits: [
-        (bobSplit as { userSplit: ID }).userSplit,
-        (aliceSplit as { userSplit: ID }).userSplit,
-      ],
     });
 
     await printExpenseDetails(expenseId);

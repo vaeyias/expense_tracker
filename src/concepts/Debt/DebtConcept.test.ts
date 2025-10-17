@@ -3,7 +3,7 @@ import { testDb } from "@utils/database.ts";
 import { ID } from "@utils/types.ts";
 import DebtConcept from "./DebtConcept.ts";
 
-Deno.test("💵 DebtConcept - full workflow and edge cases", async (t) => {
+Deno.test("--------------- 💵 DebtConcept - full workflow and edge cases 💵---------------", async (t) => {
   const [db, client] = await testDb();
   const debtConcept = new DebtConcept(db);
 

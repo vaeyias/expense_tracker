@@ -3,7 +3,7 @@ import { testDb } from "@utils/database.ts";
 import { ID } from "@utils/types.ts";
 import GroupConcept from "./GroupConcept.ts";
 
-Deno.test("👥 GroupConcept - operational principle & scenarios", async (t) => {
+Deno.test("--------------- 👥 GroupConcept - operational principle & scenarios 👥 ---------------", async (t) => {
   const [db, client] = await testDb();
   const groupConcept = new GroupConcept(db);
 

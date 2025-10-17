@@ -14,16 +14,20 @@ concept Folder
             requires owner and folder name doesn't already exist with the owner
             effect creates a new folder with the given name and owner
 
-        addToFolder(user:User,folderName:String, group:Group):
+        addGroupToFolder(user:User,folderName:String, group:Group):
             requires folder with folderName and group exists. folder belongs to owner and user is in the group
             effect adds the group into the folder
 
-        removeFromFolder(user:User,folder:Folder, group:Group):
+        removeGroupFromFolder(user:User,folder:Folder, group:Group):
             requires user, folder and group exists. folder belongs to user, user is in the group, and group is inside folder
             effect removes the group from the folder
 
+        moveFolder(user:User,folderToMove:String, parentFolder:String):
+            requires folderToMove and parentFolder to exist. Both folders belongs to the user.
+            effect changes parent of folderToMove to parentFolder
+
         deleteFolder(user:User, folder:Folder):
-            requires user and folder exists. folder belongs to user
+            requires user and folder exists. folder belongs to user.
             effect deletes the folder and moves all groups to the home page (no inside any folder)
 
         renameFolder(user:User, folder:Folder, name:String):

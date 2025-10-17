@@ -73,7 +73,54 @@ export default class FolderConcept {
   }
 
   /**
-   * Action: addToFolder
+   * Action: moveFolder
+   * Requires both folders to exist and belong to the user.
+   * Effect: Changes parent of folder to new parent
+   */
+
+  async moveFolder({
+    user,
+    folderToMove,
+    newParent,
+  }: {
+    user: User;
+    folderToMove: string;
+    newParent: string;
+  }): Promise<{ folder: Folder } | { error: string }> {
+    if (!user || !folderToMove || !newParent) {
+      return { error: "Owner, folder, and parent are required." };
+    }
+    const existingFolder = await this.folders.findOne({
+      owner: user,
+      name: folderToMove,
+    });
+    if (!existingFolder) {
+      return {
+        error:
+          `A folder with the name "${folderToMove}" doesn't exist for this user.`,
+      };
+    }
+
+    const existingParent = await this.folders.findOne({
+      owner: user,
+      name: newParent,
+    });
+    if (!existingParent) {
+      return {
+        error:
+          `A folder with the name "${newParent}" doesn't exist for this user.`,
+      };
+    }
+
+    await this.folders.updateOne({ _id: existingFolder._id }, {
+      $set: { parent: existingParent._id },
+    });
+
+    return { folder: existingFolder._id };
+  }
+
+  /**
+   * Action: addGroupToFolder
    * Effect: Adds a group to the specified folder.
    *
    * Requirements:
@@ -89,7 +136,7 @@ export default class FolderConcept {
    * - Test adding a group that is already in the folder (should have no effect).
    * - Test adding with missing user, folderName, or group.
    */
-  async addToFolder({
+  async addGroupToFolder({
     user,
     folderName,
     group,
@@ -124,7 +171,7 @@ export default class FolderConcept {
   }
 
   /**
-   * Action: removeFromFolder
+   * Action: removeGroupFromFolder
    * Effect: Removes a group from the specified folder.
    *
    * Requirements:
@@ -140,7 +187,7 @@ export default class FolderConcept {
    * - Test attempting to remove from a non-existent folder.
    * - Test removing with missing user, folder, or group.
    */
-  async removeFromFolder({
+  async removeGroupFromFolder({
     user,
     folder,
     group,
@@ -288,5 +335,32 @@ export default class FolderConcept {
 
     await this.folders.updateOne({ _id: folder }, { $set: { name: name } });
     return {};
+  }
+
+  /**
+   * Action: listFolders
+   * Effect: Retrieves all folders owned by a specific user.
+   *
+   * Requirements:
+   * - `user` is provided.
+   * - Returns a list of all folders belonging to the user.
+   *
+   * Testing guided by principle:
+   * - Test listing folders for a user with multiple folders.
+   * - Test listing folders for a user with no folders (should return an empty array, not an error).
+   * - Test attempting to list folders without a user (should return an error).
+   */
+  async _listFolders({
+    user,
+  }: {
+    user: User;
+  }): Promise<Folders[] | { error: string }> {
+    if (!user) {
+      return { error: "User is required to list folders." };
+    }
+
+    const cursor = this.folders.find({ owner: user });
+    const folders = await cursor.toArray();
+    return folders;
   }
 }

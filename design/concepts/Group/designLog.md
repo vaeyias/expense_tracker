@@ -1,10 +1,10 @@
 # Group
 ## Key Change from Assignment 2:
-- After getting feedback on Assignment 2, I created a new concept called Group to group users.
-- Group is now an independent concept. (The original concept was the GroupExpenseTracker concept)
+- After getting feedback on Assignment 2, I created an indepedent concept called Group to group users.
+- The original concept was integrated in my GroupExpenseTracker concept specification.
 
 
-## Changes While Implementing
+## Changes While Implementing Group
 - ### Draft #1 of Group Specification:
 [Draft #1](../../../context/design/concepts/Group/Group.md/steps/_.85a1a0b3.md)
 
@@ -25,19 +25,3 @@ After allowing the creator of the group to leave. I realized there might be a ca
 [Concept Draft #2](../../../context/design/concepts/Group/Group.md/steps/_.405601ea)
 
  [Implementation Draft #2](../../../context/design/concepts/Group/implementation.md/steps/_.23003ada.md)
-
- ## Testing
- - When testing, I tried to get the LLM to output the test cases in a similar format to ExpenseConcept.tests.ts, but I had trouble getting the LLM to do this. So, I took the test cases generated and manually modified the code to match the output of ExpenseConcept.tests.ts.
-
-- When testing I was stuck on a bug where certain test cases would sometimes pass and sometimes fail. I chose to focus on the addUser action. I figured out that the issue was because I updateOne is async and I needed to add await. This was the cause of many bugs:
-```
-await this.groups.updateOne(
-      { _id: group },
-      { $addToSet: { members: newMember } }, // $addToSet ensures uniqueness
-    );
-```
-
-- Then, I realized that the Group concept implementation was throwing errors for every error instead of returning errors. So, I fixed this and modified the test file to match this. I also changed a lot of the test cases that seemed redundant.
-
-[New Test File](../../../context/design/concepts/Group/testing.md/steps/_.4a60b7a6.md)
-[New Implementation](../../../context/design/concepts/Group/implementation.md/steps/_.8966935b.md)
