@@ -5,12 +5,12 @@
 
 ### **Design Logs for Specific Concepts**
 
-- [Expense Design Log](concepts/Expense/designLog.md)
+- [Expense Design Log](design/concepts/Expense/designLog.md)
 
-- [Debt Design Log](concepts/Debt/designLog.md)
+- [Debt Design Log](design/concepts/Debt/designLog.md)
 
-- [Group Design Log](concepts/Group/designLog.md)
+- [Group Design Log](design/concepts/Group/designLog.md)
 
-- [Folder Design Log](concepts/Folder/designLog.md)
+- [Folder Design Log](design/concepts/Folder/designLog.md)
 
-- [User Design Log](concepts/User/designLog.md)
+- [User Design Log](design/concepts/User/designLog.md)
