@@ -294,4 +294,30 @@ export default class ExpenseConcept {
     const splits = await this.userSplits.find({ expense: expenseId }).toArray();
     return { splits };
   }
+
+  /**
+   * @requires user exists
+   * @effects returns all expenses where the user is the payer or part of the userSplits
+   */
+  async _getExpensesByUser({ user }: { user: User }): Promise<Expenses[]> {
+    const expensesAsPayer = await this.expenses.find({ payer: user }).toArray();
+
+    // Get userSplit IDs for this user
+    const splits = await this.userSplits.find({ user }).toArray();
+    const expenseIds = splits.map((s) => s.expense);
+
+    const expensesAsParticipant = await this.expenses
+      .find({ _id: { $in: expenseIds } })
+      .toArray();
+
+    // Merge and remove duplicates
+    const allExpenses = [
+      ...expensesAsPayer,
+      ...expensesAsParticipant.filter(
+        (e) => !expensesAsPayer.some((p) => p._id === e._id),
+      ),
+    ];
+
+    return allExpenses;
+  }
 }

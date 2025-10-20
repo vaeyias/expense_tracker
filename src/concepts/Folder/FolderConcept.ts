@@ -363,4 +363,90 @@ export default class FolderConcept {
     const folders = await cursor.toArray();
     return folders;
   }
+
+  /**
+   * Query: _getFolderById
+   * Effect: Returns a single folder given its ID and user.
+   *
+   * Requirements:
+   * - `user` and `folder` are provided.
+   * - Folder must belong to user.
+   */
+  async _getFolderById({
+    user,
+    folder,
+  }: {
+    user: User;
+    folder: Folder;
+  }): Promise<Folders | { error: string }> {
+    if (!user || !folder) {
+      return { error: "User and folder are required." };
+    }
+
+    const folderDoc = await this.folders.findOne({ _id: folder, owner: user });
+    if (!folderDoc) {
+      return { error: `Folder "${folder}" not found for user ${user}.` };
+    }
+    return folderDoc;
+  }
+
+  /**
+   * Query: _listSubfolders
+   * Effect: Returns all folders that have the given folder as parent.
+   */
+  async _listSubfolders({
+    user,
+    parent,
+  }: {
+    user: User;
+    parent: Folder;
+  }): Promise<Folders[] | { error: string }> {
+    if (!user || !parent) {
+      return { error: "User and parent folder are required." };
+    }
+
+    const children = await this.folders.find({ owner: user, parent }).toArray();
+    return children;
+  }
+
+  /**
+   * Query: _listGroupsInFolder
+   * Effect: Returns the group IDs inside a folder.
+   */
+  async _listGroupsInFolder({
+    user,
+    folder,
+  }: {
+    user: User;
+    folder: Folder;
+  }): Promise<Group[] | { error: string }> {
+    if (!user || !folder) {
+      return { error: "User and folder are required." };
+    }
+
+    const folderDoc = await this.folders.findOne({ _id: folder, owner: user });
+    if (!folderDoc) {
+      return { error: `Folder "${folder}" not found for user ${user}.` };
+    }
+
+    return folderDoc.groups;
+  }
+
+  /**
+   * Query: _getRootFolder
+   * Effect: Returns all top-level folders (parent = null) for a user.
+   */
+  async _getRootFolder({
+    user,
+  }: {
+    user: User;
+  }): Promise<Folders[] | { error: string }> {
+    if (!user) {
+      return { error: "User is required." };
+    }
+
+    const roots = await this.folders.find({ owner: user, parent: null })
+      .toArray();
+    return roots;
+  }
 }

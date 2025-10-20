@@ -5,10 +5,9 @@ import { Collection, Db } from "npm:mongodb";
 import { ID } from "@utils/types.ts"; // Assuming ID is a type alias for string with branding
 import { freshID } from "@utils/database.ts";
 
-// Define User and Expense types (assuming they are globally defined or imported)
+// Define User type (assuming it is globally defined or imported)
 // For demonstration, we'll define them as ID
 type User = ID;
-type Expense = ID; // Reference to an expense object
 
 // Declare collection prefix
 const PREFIX = "Debt" + ".";
@@ -17,30 +16,18 @@ const PREFIX = "Debt" + ".";
  * Represents a personal debt between two users.
  * userA owes userB if balance is positive.
  */
-interface PersonalDebt {
+interface Debt {
   _id: ID; // Unique identifier for the personal debt record
   userA: User;
   userB: User;
   balance: number; // positive if userA owes userB, negative if userB owes userA
 }
 
-/**
- * Represents a record of a specific debt transaction, usually tied to an expense.
- */
-interface DebtRecord {
-  _id: ID; // Unique identifier for the debt record
-  payer: User;
-  receiversSplits: Record<User, number>; // Map of user to the amount they owe the payer for this record
-  expense: Expense; // Reference to the associated expense
-}
-
 export default class DebtConcept {
-  personalDebts: Collection<PersonalDebt>;
-  debtRecords: Collection<DebtRecord>;
+  debts: Collection<Debt>;
 
   constructor(private readonly db: Db) {
-    this.personalDebts = this.db.collection(PREFIX + "personalDebts");
-    this.debtRecords = this.db.collection(PREFIX + "debtRecords");
+    this.debts = this.db.collection(PREFIX + "debts");
   }
 
   /**
@@ -49,19 +36,19 @@ export default class DebtConcept {
    * @param userB The second user.
    * @returns The newly created personal debt record.
    */
-  async createPersonalDebt({
+  async createDebt({
     userA,
     userB,
   }: {
     userA: User;
     userB: User;
-  }): Promise<{ debt: PersonalDebt } | { error: string }> {
-    // Requires: both users exist and a PersonalDebt between them does not already exist
+  }): Promise<{ debt: Debt } | { error: string }> {
+    // Requires: both users exist and a Debt between them does not already exist
     // This check would typically involve querying user collection (not provided here)
-    // and checking for existing personalDebts between userA and userB.
+    // and checking for existing debts between userA and userB.
     // For simplicity, we'll assume the existence and uniqueness checks are handled externally or by caller.
 
-    const existingDebt = await this.personalDebts.findOne({
+    const existingDebt = await this.debts.findOne({
       $or: [
         { userA: userA, userB: userB },
         { userA: userB, userB: userA },
@@ -69,17 +56,16 @@ export default class DebtConcept {
     });
 
     if (existingDebt) {
-      console.log("HI");
-      return { error: "Personal debt already exists between these users." };
+      return { error: "Debt already exists between these users." };
     }
 
-    const newDebt: PersonalDebt = {
+    const newDebt: Debt = {
       _id: await freshID(), // Assuming freshID() is available for generating unique IDs
       userA: userA,
       userB: userB,
       balance: 0,
     };
-    await this.personalDebts.insertOne(newDebt);
+    await this.debts.insertOne(newDebt);
     return { debt: newDebt };
   }
 
@@ -90,7 +76,7 @@ export default class DebtConcept {
    * @param amount The amount of the payment.
    * @returns The updated balance between the payer and receiver.
    */
-  async updatePersonalDebt({
+  async updateDebt({
     payer,
     receiver,
     amount,
@@ -99,8 +85,8 @@ export default class DebtConcept {
     receiver: User;
     amount: number;
   }): Promise<{ balance: number } | { error: string }> {
-    // Requires: a PersonalDebt exists between payer and receiver
-    const debt = await this.personalDebts.findOne({
+    // Requires: a Debt exists between payer and receiver
+    const debt = await this.debts.findOne({
       $or: [
         { userA: payer, userB: receiver },
         { userA: receiver, userB: payer },
@@ -109,7 +95,7 @@ export default class DebtConcept {
 
     if (!debt) {
       return {
-        error: "Personal debt does not exist between payer and receiver.",
+        error: "Debt does not exist between payer and receiver.",
       };
     }
 
@@ -129,7 +115,7 @@ export default class DebtConcept {
       updatedBalance = debt.balance + amount;
     }
 
-    await this.personalDebts.updateOne(
+    await this.debts.updateOne(
       { _id: debt._id },
       { $set: { balance: updatedBalance } },
     );
@@ -138,181 +124,31 @@ export default class DebtConcept {
   }
 
   /**
-   * Creates a new debt record for a shared expense.
-   * @param payer The user who paid for the expense.
-   * @param totalCost The total cost of the expense.
-   * @param receiversSplit A map of users to the amount they owe the payer for this expense.
-   * @returns The newly created debt record.
+   * Deletes an existing debt between two users.
+   * @param userA The first user.
+   * @param userB The second user.
+   * @returns Success object or error if debt does not exist.
    */
-  async createDebtRecord({
-    payer,
-    totalCost,
-    receiversSplit,
-    expenseId,
+  async deleteDebt({
+    userA,
+    userB,
   }: {
-    payer: User;
-    totalCost: number;
-    receiversSplit: Record<User, number>;
-    expenseId: ID;
-  }): Promise<{ debtRecord: DebtRecord } | { error: string }> {
-    // Validation: all debtMapping amounts are non-negative
-    for (const [user, amount] of Object.entries(receiversSplit)) {
-      if (amount < 0) {
-        return { error: `Debt for user ${user} cannot be negative` };
-      }
-    }
-
-    // Validation: sum of splits equals totalCost
-    const totalDebt = Object.values(receiversSplit).reduce((a, b) => a + b, 0);
-    if (Math.abs(totalDebt - totalCost) > 0.001) { // Use tolerance for float comparison
-      return { error: "Sum of receiver splits must equal total cost." };
-    }
-
-    if (totalCost < 0) {
-      return { error: "Total cost cannot be negative." };
-    }
-
-    const newDebtRecord: DebtRecord = {
-      _id: await freshID(),
-      payer: payer,
-      receiversSplits: receiversSplit,
-      expense: expenseId,
-    };
-
-    // Update personal debt balances
-    for (const [receiver, amountOwed] of Object.entries(receiversSplit)) {
-      if (payer !== receiver) { // Don't update debt if payer is also receiver for this split amount
-        await this.updatePersonalDebt({
-          payer: payer, // The receiver owes the payer
-          receiver: receiver as User,
-          amount: amountOwed,
-        });
-      }
-    }
-
-    await this.debtRecords.insertOne(newDebtRecord);
-    return { debtRecord: newDebtRecord };
-  }
-
-  /**
-   * Edits an existing debt record and recalculates affected personal debt balances.
-   * @param debtRecordId The ID of the debt record to edit.
-   * @param totalCost The new total cost of the expense.
-   * @param receiversSplit The new map of users and amounts owed.
-   * @returns The updated debt record.
-   */
-  async editDebtRecord({
-    debtRecordId,
-    totalCost,
-    receiversSplit,
-  }: {
-    debtRecordId: ID;
-    totalCost: number;
-    receiversSplit: Record<User, number>;
-  }): Promise<{ debtRecord: DebtRecord } | { error: string }> {
-    // Requires: debtRecord exists, totalCost > 0, all receivers exist, numbers in receiversSplit are nonnegative and sum to totalCost
-
-    const existingDebtRecord = await this.debtRecords.findOne({
-      _id: debtRecordId,
+    userA: User;
+    userB: User;
+  }): Promise<{} | { error: string }> {
+    const debt = await this.debts.findOne({
+      $or: [
+        { userA: userA, userB: userB },
+        { userA: userB, userB: userA },
+      ],
     });
 
-    if (!existingDebtRecord) {
-      return { error: "Debt record not found." };
+    if (!debt) {
+      return { error: "Debt does not exist between these users." };
     }
 
-    for (const [user, amount] of Object.entries(receiversSplit)) {
-      if (amount < 0) {
-        return { error: `Debt for user ${user} cannot be negative` };
-      }
-    }
-
-    // Validation: sum of splits equals totalCost
-    const totalDebt = Object.values(receiversSplit).reduce((a, b) => a + b, 0);
-    if (Math.abs(totalDebt - totalCost) > 0.001) { // Use tolerance for float comparison
-      return { error: "Sum of receiver splits must equal total cost." };
-    }
-
-    if (totalCost <= 0) {
-      return { error: "Total cost must be positive." };
-    }
-
-    // To accurately recalculate balances, we first need to reverse the effects of the old record.
-    // For each receiver in the old record, subtract their owed amount from the payer.
-    for (
-      const [receiver, amountOwed] of Object.entries(
-        existingDebtRecord.receiversSplits,
-      )
-    ) {
-      if (existingDebtRecord.payer !== receiver) {
-        await this.updatePersonalDebt({
-          payer: receiver as User,
-          receiver: existingDebtRecord.payer,
-          amount: amountOwed, // subtract old amount
-        });
-      }
-    }
-
-    // Then, apply the effects of the new receivers split.
-    for (const [receiver, amountOwed] of Object.entries(receiversSplit)) {
-      if (existingDebtRecord.payer !== receiver) {
-        await this.updatePersonalDebt({
-          payer: receiver as User,
-          receiver: existingDebtRecord.payer,
-          amount: -amountOwed, // Add the new amount
-        });
-      }
-    }
-
-    const updatedDebtRecord: DebtRecord = {
-      ...existingDebtRecord,
-      receiversSplits: receiversSplit,
-    };
-
-    await this.debtRecords.updateOne(
-      { _id: debtRecordId },
-      { $set: updatedDebtRecord },
-    );
-
-    return { debtRecord: updatedDebtRecord };
-  }
-
-  /**
-   * Deletes a debt record and adjusts affected personal debt balances.
-   * @param debtRecordId The ID of the debt record to delete.
-   * @returns An empty object on success, or an error object.
-   */
-  async deleteDebtRecord({
-    debtRecordId,
-  }: {
-    debtRecordId: ID;
-  }): Promise<any> { // Returning 'any' to allow for error object or empty success
-    // Requires: debtRecord exists
-    const existingDebtRecord = await this.debtRecords.findOne({
-      _id: debtRecordId,
-    });
-
-    if (!existingDebtRecord) {
-      return { error: "Debt record not found." };
-    }
-
-    // Reverse the effects of the debt record
-    for (
-      const [receiver, amountOwed] of Object.entries(
-        existingDebtRecord.receiversSplits,
-      )
-    ) {
-      if (existingDebtRecord.payer !== receiver) {
-        await this.updatePersonalDebt({
-          payer: receiver as User,
-          receiver: existingDebtRecord.payer,
-          amount: amountOwed, // Subtract the owed amount
-        });
-      }
-    }
-
-    await this.debtRecords.deleteOne({ _id: debtRecordId });
-
-    return {}; // Success, return empty object
+    await this.debts.deleteOne({ _id: debt._id });
+    return {}; // success
   }
 
   /**
@@ -328,8 +164,8 @@ export default class DebtConcept {
     userA: User;
     userB: User;
   }): Promise<{ balance: number } | { error: string }> {
-    // Requires: a PersonalDebt exists between the two users
-    const debt = await this.personalDebts.findOne({
+    // Requires: a Debt exists between the two users
+    const debt = await this.debts.findOne({
       $or: [
         { userA: userA, userB: userB },
         { userA: userB, userB: userA },
@@ -337,7 +173,7 @@ export default class DebtConcept {
     });
 
     if (!debt) {
-      return { error: "Personal debt does not exist between these users." };
+      return { error: "Debt does not exist between these users." };
     }
 
     // The balance is stored as 'userA owes userB'.
@@ -351,6 +187,43 @@ export default class DebtConcept {
       return { error: "Unexpected debt record structure." };
     }
   }
+
+  /**
+   * Lists all debts involving a given user with non-zero balance.
+   */
+  async _listDebtsForUser(user: User): Promise<Debt[]> {
+    return await this.debts
+      .find({
+        balance: { $ne: 0 },
+        $or: [
+          { userA: user },
+          { userB: user },
+        ],
+      })
+      .toArray();
+  }
+
+  /**
+   * Computes the net balance of a user across all debts.
+   * Positive = others owe this user, Negative = this user owes others.
+   */
+  async _getNetBalance(user: User): Promise<number> {
+    const debts = await this._listDebtsForUser(user);
+    let total = 0;
+
+    for (const d of debts) {
+      if (d.userA === user) {
+        // user owes userB
+        total -= d.balance;
+      } else if (d.userB === user) {
+        // userB is owed by userA
+        total += d.balance;
+      }
+    }
+
+    return total;
+  }
 }
+
 
 ```

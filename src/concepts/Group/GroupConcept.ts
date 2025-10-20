@@ -206,13 +206,13 @@ export default class GroupConcept {
   }
 
   // Helper to get group by ID for other operations
-  private async getGroup(group: Group): Promise<Groups | null> {
+  private async _getGroup(group: Group): Promise<Groups | null> {
     return await this.groups.findOne({ _id: group });
   }
 
   // Helper for checking if a user is a member of a group
   private async isMember(group: Group, user: User): Promise<boolean> {
-    const groupDoc = await this.getGroup(group);
+    const groupDoc = await this._getGroup(group);
     return groupDoc ? groupDoc.members.includes(user) : false;
   }
 
