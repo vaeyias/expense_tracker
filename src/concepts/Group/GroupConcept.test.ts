@@ -188,7 +188,7 @@ Deno.test("--------------- 👥 GroupConcept - operational principle & scenarios
       inviter: user1,
       newMember: user2,
     });
-    assertEquals(result.error, "New member is already in the group.");
+    assertEquals(result.error, "User is already in the group.");
 
     console.log("[3] Removing non-member user3...");
     result = await groupConcept.removeUser({

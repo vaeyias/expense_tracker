@@ -44,9 +44,11 @@ export default class FolderConcept {
   async createFolder({
     owner,
     name,
+    parent,
   }: {
     owner: User;
     name: string;
+    parent: Folder | null;
   }): Promise<{ folder: Folder } | { error: string }> {
     if (!owner || !name) {
       return { error: "Owner and folder name are required." };
@@ -62,7 +64,7 @@ export default class FolderConcept {
 
     const newFolderDoc: Folders = {
       _id: freshID(),
-      parent: null, // Default to root
+      parent: parent || null, // Default to root
       name: name,
       owner: owner,
       groups: [],
@@ -142,7 +144,7 @@ export default class FolderConcept {
     group,
   }: {
     user: User;
-    folderName: string;
+    folderName: string | null;
     group: Group;
   }): Promise<Empty | { error: string }> {
     if (!user || !folderName || !group) {
@@ -265,7 +267,7 @@ export default class FolderConcept {
 
     const rootFolderForUser = await this.folders.findOne({
       owner: user,
-      parent: null,
+      name: ".root",
     });
 
     if (rootFolderForUser) {
@@ -420,13 +422,32 @@ export default class FolderConcept {
     user: User;
     folder: Folder;
   }): Promise<Group[] | { error: string }> {
-    if (!user || !folder) {
-      return { error: "User and folder are required." };
+    if (!user) {
+      return { error: "User is required." };
     }
 
     const folderDoc = await this.folders.findOne({ _id: folder, owner: user });
     if (!folderDoc) {
       return { error: `Folder "${folder}" not found for user ${user}.` };
+    }
+
+    return folderDoc.groups;
+  }
+
+  async _listGroupsInFolderByName({
+    user,
+    name,
+  }: {
+    user: User;
+    name: string;
+  }): Promise<Group[] | { error: string }> {
+    if (!user) {
+      return { error: "User is required." };
+    }
+
+    const folderDoc = await this.folders.findOne({ name: name, owner: user });
+    if (!folderDoc) {
+      return { error: `Folder "${name}" not found for user ${user}.` };
     }
 
     return folderDoc.groups;

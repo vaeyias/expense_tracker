@@ -4,29 +4,33 @@ import { walk } from "jsr:@std/fs";
 import { parseArgs } from "jsr:@std/cli/parse-args";
 import { toFileUrl } from "jsr:@std/path/to-file-url";
 
-// Parse command-line arguments for port and base URL
+// Parse command-line arguments
 const flags = parseArgs(Deno.args, {
   string: ["port", "baseUrl"],
-  default: {
-    port: "8000",
-    baseUrl: "/api",
-  },
+  default: { port: "8000", baseUrl: "/api" },
 });
 
 const PORT = parseInt(flags.port, 10);
 const BASE_URL = flags.baseUrl;
 const CONCEPTS_DIR = "src/concepts";
 
-/**
- * Main server function to initialize DB, load concepts, and start the server.
- */
 async function main() {
   const [db] = await getDb();
   const app = new Hono();
 
+  // --- CORS Middleware ---
+  app.use("*", (c, next) => {
+    c.header("Access-Control-Allow-Origin", "http://localhost:5173"); // frontend URL
+    c.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    c.header("Access-Control-Allow-Headers", "Content-Type");
+    return next();
+  });
+
+  // Handle preflight requests globally
+  app.options("*", (c) => c.text(undefined, 204));
+
   app.get("/", (c) => c.text("Concept Server is running."));
 
-  // --- Dynamic Concept Loading and Routing ---
   console.log(`Scanning for concepts in ./${CONCEPTS_DIR}...`);
 
   for await (
@@ -36,7 +40,7 @@ async function main() {
       includeFiles: false,
     })
   ) {
-    if (entry.path === CONCEPTS_DIR) continue; // Skip the root directory
+    if (entry.path === CONCEPTS_DIR) continue;
 
     const conceptName = entry.name;
     const conceptFilePath = `${entry.path}/${conceptName}Concept.ts`;
@@ -75,7 +79,7 @@ async function main() {
 
         app.post(route, async (c) => {
           try {
-            const body = await c.req.json().catch(() => ({})); // Handle empty body
+            const body = await c.req.json().catch(() => ({}));
             const result = await instance[methodName](body);
             return c.json(result);
           } catch (e) {
@@ -86,10 +90,7 @@ async function main() {
         console.log(`  - Endpoint: POST ${route}`);
       }
     } catch (e) {
-      console.error(
-        `! Error loading concept from ${conceptFilePath}:`,
-        e,
-      );
+      console.error(`! Error loading concept from ${conceptFilePath}:`, e);
     }
   }
 
@@ -97,5 +98,4 @@ async function main() {
   Deno.serve({ port: PORT }, app.fetch);
 }
 
-// Run the server
 main();

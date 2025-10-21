@@ -21,7 +21,8 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
     if (!existingRoot) {
       const rootRes = await folderConcept.createFolder({
         owner,
-        name: "Root",
+        name: ".root",
+        parent: null,
       });
       assertNotEquals("error" in rootRes, true, (rootRes as any).error);
       console.log(`Created root folder for ${owner} using createFolder action`);
@@ -39,6 +40,7 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       const createRes = await folderConcept.createFolder({
         owner: alice,
         name: "MyDocs",
+        parent: null,
       });
       assertNotEquals("error" in createRes, true, (createRes as any).error);
       const myDocsFolderId = (createRes as { folder: ID }).folder;
@@ -115,6 +117,7 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       const createRes = await folderConcept.createFolder({
         owner: alice,
         name: "Archive",
+        parent: null,
       });
       assertNotEquals("error" in createRes, true, (createRes as any).error);
       const archiveFolderId = (createRes as { folder: ID }).folder;
@@ -156,14 +159,17 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       const folderARes = await folderConcept.createFolder({
         owner: alice,
         name: "FolderA",
+        parent: null,
       });
       const folderBRes = await folderConcept.createFolder({
         owner: alice,
         name: "FolderB",
+        parent: null,
       });
       const folderCRes = await folderConcept.createFolder({
         owner: alice,
         name: "FolderC",
+        parent: null,
       });
 
       const folderA = (folderARes as { folder: ID }).folder;
@@ -212,6 +218,7 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       const createRes = await folderConcept.createFolder({
         owner: bob,
         name: "Shared",
+        parent: null,
       });
       assertNotEquals("error" in createRes, true);
       const sharedFolderId = (createRes as { folder: ID }).folder;
@@ -252,6 +259,7 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       const duplicateFolderRes = await folderConcept.createFolder({
         owner: bob,
         name: "Shared",
+        parent: null,
       });
       assertEquals("error" in duplicateFolderRes, true);
 
@@ -278,6 +286,7 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       const aliceFolder1Res = await folderConcept.createFolder({
         owner: alice,
         name: "AliceFolder",
+        parent: null,
       });
       assertNotEquals(
         "error" in aliceFolder1Res,
@@ -291,6 +300,7 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       const bobFolderRes = await folderConcept.createFolder({
         owner: bob,
         name: "BobFolder",
+        parent: null,
       });
       assertNotEquals(
         "error" in bobFolderRes,

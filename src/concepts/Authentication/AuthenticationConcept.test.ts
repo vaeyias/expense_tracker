@@ -1,11 +1,11 @@
 import { assertEquals, assertNotEquals } from "jsr:@std/assert";
 import { testDb } from "@utils/database.ts";
 import { ID } from "@utils/types.ts";
-import UserConcept from "./UserConcept.ts";
+import AuthenticationConcept from "./AuthenticationConcept.ts";
 
-Deno.test("--------------- 🧑 UserConcept - user management 🧑 ---------------", async (t) => {
+Deno.test("--------------- 🧑 authenticationConcept - user management 🧑 ---------------", async (t) => {
   const [db, client] = await testDb();
-  const userConcept = new UserConcept(db);
+  const authenticationConcept = new AuthenticationConcept(db);
 
   const alice = "user:Alice" as ID;
   const bob = "user:Bob" as ID;
@@ -14,9 +14,10 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
   // Test Case #1: Full workflow - create a user, edit displayName, delete a user
   await t.step("Test Case #1: Full user workflow", async () => {
     console.log("[1] Creating user Alice...");
-    const aliceCreation = await userConcept.createUser({
+    const aliceCreation = await authenticationConcept.createUser({
       username: "alice",
       displayName: "Alice Wonderland",
+      password: "alicePass123",
     });
     assertNotEquals(
       "error" in aliceCreation,
@@ -27,7 +28,7 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
     console.log(`[1] Alice created with ID: ${aliceId}`);
 
     console.log("[1] Retrieving Alice's info...");
-    let aliceInfo = await userConcept._getUserById({ user: aliceId });
+    let aliceInfo = await authenticationConcept._getUserById({ user: aliceId });
     assertNotEquals(
       "error" in aliceInfo,
       true,
@@ -46,12 +47,12 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
 
     console.log("[1] Updating Alice's displayName...");
 
-    const newAlice = await userConcept.editUser({
+    const newAlice = await authenticationConcept.editUser({
       user: aliceId,
       newDisplayName: "Alice Borderland",
     });
 
-    aliceInfo = await userConcept._getUserById({ user: aliceId });
+    aliceInfo = await authenticationConcept._getUserById({ user: aliceId });
     assertNotEquals(
       "error" in aliceInfo,
       true,
@@ -71,7 +72,9 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
     );
 
     console.log("[1] Deleting Alice...");
-    const deleteAliceRes = await userConcept.deleteUser({ user: aliceId });
+    const deleteAliceRes = await authenticationConcept.deleteUser({
+      user: aliceId,
+    });
     assertEquals(
       deleteAliceRes,
       {},
@@ -80,7 +83,9 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
     console.log("[1] Alice deleted.");
 
     console.log("[1] Attempting to retrieve deleted Alice...");
-    const deletedAliceInfo = await userConcept._getUserById({ user: aliceId });
+    const deletedAliceInfo = await authenticationConcept._getUserById({
+      user: aliceId,
+    });
     assertEquals(
       "error" in deletedAliceInfo,
       true,
@@ -92,9 +97,10 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
   // Test Case #2: Duplicate Username - create a user, try to create another user with same username
   await t.step("Test Case #2: Duplicate Username Handling", async () => {
     console.log("[2] Creating user Bob...");
-    const bobCreation = await userConcept.createUser({
+    const bobCreation = await authenticationConcept.createUser({
       username: "bob",
       displayName: "Bob The Builder",
+      password: "bobPass123",
     });
     assertNotEquals(
       "error" in bobCreation,
@@ -105,9 +111,10 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
     console.log(`[2] Bob created with ID: ${bobId}`);
 
     console.log("[2] Attempting to create another user with username 'bob'...");
-    const duplicateBobCreation = await userConcept.createUser({
+    const duplicateBobCreation = await authenticationConcept.createUser({
       username: "bob",
       displayName: "Bob The Second",
+      password: "anotherPass",
     });
     assertEquals(
       "error" in duplicateBobCreation,
@@ -121,15 +128,16 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
     );
 
     // Clean up
-    await userConcept.deleteUser({ user: bobId });
+    await authenticationConcept.deleteUser({ user: bobId });
   });
 
   // Test Case #3: Duplicate Display Name is Allowed
   await t.step("Test Case #3: Duplicate Display Name Allowed", async () => {
     console.log("[3] Creating user Charlie...");
-    const charlieCreation = await userConcept.createUser({
+    const charlieCreation = await authenticationConcept.createUser({
       username: "charlie",
       displayName: "Charlie Chaplin",
+      password: "charliePass123",
     });
     assertNotEquals(
       "error" in charlieCreation,
@@ -142,9 +150,10 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
     console.log(
       "[3] Creating another user with the same displayName 'Charlie Chaplin'...",
     );
-    const anotherCharlieCreation = await userConcept.createUser({
+    const anotherCharlieCreation = await authenticationConcept.createUser({
       username: "another_charlie",
       displayName: "Charlie Chaplin",
+      password: "anotherCharliePass",
     });
     assertNotEquals(
       "error" in anotherCharlieCreation,
@@ -156,8 +165,10 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
       `[3] Another user with same displayName created with ID: ${anotherCharlieId}`,
     );
 
-    const charlieInfo = await userConcept._getUserById({ user: charlieId });
-    const anotherCharlieInfo = await userConcept._getUserById({
+    const charlieInfo = await authenticationConcept._getUserById({
+      user: charlieId,
+    });
+    const anotherCharlieInfo = await authenticationConcept._getUserById({
       user: anotherCharlieId,
     });
 
@@ -179,8 +190,8 @@ Deno.test("--------------- 🧑 UserConcept - user management 🧑 -------------
     );
 
     // Clean up
-    await userConcept.deleteUser({ user: charlieId });
-    await userConcept.deleteUser({ user: anotherCharlieId });
+    await authenticationConcept.deleteUser({ user: charlieId });
+    await authenticationConcept.deleteUser({ user: anotherCharlieId });
   });
 
   await client.close();

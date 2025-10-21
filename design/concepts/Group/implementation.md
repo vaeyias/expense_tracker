@@ -1,7 +1,6 @@
 # group-implementation
 ```ts
 import { Collection, Db } from "npm:mongodb";
-import { Collection, Db } from "npm:mongodb";
 import { Empty, ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 
@@ -90,10 +89,10 @@ export default class GroupConcept {
       return { error: "Inviter is not a member of the group." };
     }
     if (groupDoc.members.includes(newMember)) {
-      return { error: "New member is already in the group." };
+      return { error: "User is already in the group." };
     }
     if (!this.userExists(newMember)) {
-      return { error: "New member does not exist." };
+      return { error: "User does not exist." };
     }
 
     await this.groups.updateOne(
@@ -209,13 +208,20 @@ export default class GroupConcept {
   }
 
   // Helper to get group by ID for other operations
-  private async _getGroup(group: Group): Promise<Groups | null> {
-    return await this.groups.findOne({ _id: group });
+  private async _getGroup(
+    { group }: { group: Group },
+  ): Promise<Groups | null> {
+    // console.log("hi", group);
+    const groupDoc = await this.groups.findOne({ _id: group });
+    // console.log(groupDoc?.members);
+    return groupDoc;
   }
 
   // Helper for checking if a user is a member of a group
-  private async isMember(group: Group, user: User): Promise<boolean> {
-    const groupDoc = await this._getGroup(group);
+  private async isMember(
+    { group, user }: { group: Group; user: User },
+  ): Promise<boolean> {
+    const groupDoc = await this._getGroup({ group });
     return groupDoc ? groupDoc.members.includes(user) : false;
   }
 
@@ -231,5 +237,4 @@ export default class GroupConcept {
     return typeof user === "string" && user.length > 0;
   }
 }
-
 ```

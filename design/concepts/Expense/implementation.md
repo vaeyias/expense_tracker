@@ -297,6 +297,20 @@ export default class ExpenseConcept {
     return { splits };
   }
 
+  async _getSplitForExpense(
+    { expenseId, user }: { expenseId: ID; user: User },
+  ) {
+    const split = await this.userSplits.findOne({
+      expense: expenseId,
+      user: user,
+    });
+
+    if (split) {
+      return { split };
+    }
+    return;
+  }
+
   /**
    * @requires user exists
    * @effects returns all expenses where the user is the payer or part of the userSplits

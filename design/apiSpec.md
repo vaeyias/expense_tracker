@@ -1,10 +1,10 @@
-# API Specifications
-
 # API Specification: Debt Concept
 
-**Purpose:** To manage personal debts between users, allowing for creation, updating, deletion, and querying of debt relationships.
+**Purpose:** Represents a personal debt between two users.
 
 ---
+
+## API Endpoints
 
 ### POST /api/Debt/createDebt
 
@@ -12,10 +12,10 @@
 
 **Requirements:**
 - Both users exist.
-- A debt between these users does not already exist.
+- A Debt between them does not already exist.
 
 **Effects:**
-- Creates a new debt record with a balance of 0.
+- Creates a new personal debt record.
 
 **Request Body:**
 ```json
@@ -42,13 +42,13 @@
 
 ### POST /api/Debt/updateDebt
 
-**Description:** Updates the balance of an existing personal debt between two users based on a payment.
+**Description:** Updates the balance of an existing personal debt between two users.
 
 **Requirements:**
-- A debt exists between the payer and receiver.
+- A Debt exists between payer and receiver.
 
 **Effects:**
-- Adjusts the balance of the debt record to reflect the payment.
+- Updates the balance of the debt.
 
 **Request Body:**
 ```json
@@ -76,13 +76,13 @@
 
 ### POST /api/Debt/deleteDebt
 
-**Description:** Deletes an existing debt record between two users.
+**Description:** Deletes an existing debt between two users.
 
 **Requirements:**
-- A debt exists between the two users.
+- A Debt exists between userA and userB.
 
 **Effects:**
-- Removes the debt record from the database.
+- Deletes the debt record.
 
 **Request Body:**
 ```json
@@ -107,13 +107,13 @@
 
 ### POST /api/Debt/getDebt
 
-**Description:** Retrieves the net balance between two specific users.
+**Description:** Gets the net balance between two users.
 
 **Requirements:**
-- A debt record exists between the two users.
+- A Debt exists between the two users.
 
 **Effects:**
-- Returns the current balance between the two users.
+- Returns the net balance.
 
 **Request Body:**
 ```json
@@ -138,24 +138,80 @@
 ```
 ---
 
+### POST /api/Debt/_listDebtsForUser
+
+**Description:** Lists all debts involving a given user with non-zero balance.
+
+**Request Body:**
+```json
+{
+  "user": "ID"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "_id": "ID",
+    "userA": "ID",
+    "userB": "ID",
+    "balance": "number"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+
+### POST /api/Debt/_getNetBalance
+
+**Description:** Computes the net balance of a user across all debts.
+
+**Request Body:**
+```json
+{
+  "user": "ID"
+}
+```
+
+**Success Response Body (Query):**
+```json
+{
+  "balance": "number"
+}
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
 # API Specification: Expense Concept
 
-**Purpose:** To manage expenses within groups, including tracking who paid, individual shares, and overall expense details.
+**Purpose:** Manages expenses and user splits within groups.
 
 ---
 
+## API Endpoints
+
 ### POST /api/Expense/createExpense
 
-**Description:** Initiates the creation of a new expense record for a group, setting initial default values.
+**Description:** Creates a new expense with initial details.
 
 **Requirements:**
-- The user exists.
-- The group exists.
-- The total cost is non-negative.
+- User exists.
+- Total cost is non-negative.
 
 **Effects:**
-- Creates an Expense document with default values (empty title, description, category, zero total cost, current date, provided group and payer).
-- Creates an empty list of user splits.
+- Creates an Expense document.
 
 **Request Body:**
 ```json
@@ -185,12 +241,12 @@
 **Description:** Updates the details of an existing expense.
 
 **Requirements:**
-- The expense to edit exists.
-- The total cost is non-negative.
-- The sum of user splits' amounts owed equals the total cost.
+- Expense exists to be edited.
+- Total cost is non-negative.
+- Sum of userSplits.amountOwed equals totalCost.
 
 **Effects:**
-- Updates the specified fields of the expense document.
+- Updates the Expense document.
 
 **Request Body:**
 ```json
@@ -222,13 +278,13 @@
 
 ### POST /api/Expense/deleteExpense
 
-**Description:** Deletes an expense and all its associated user splits.
+**Description:** Deletes an expense.
 
 **Requirements:**
-- The expense to delete exists.
+- Expense exists to be deleted.
 
 **Effects:**
-- Removes the expense document and related user split documents.
+- Deletes the expense document.
 
 **Request Body:**
 ```json
@@ -257,13 +313,13 @@
 **Description:** Adds a user's share to an expense.
 
 **Requirements:**
-- The expense exists.
-- The amount owed is non-negative.
-- The user does not already have a user split in this expense.
+- Expense exists.
+- Amount owed is non-negative.
+- User does not already have a split in this expense.
 
 **Effects:**
-- Creates a UserSplit document.
-- Adds the UserSplit's ID to the expense's `userSplits` array.
+- Adds a UserSplit document.
+- Adds the UserSplit ID to the expense's userSplits array.
 
 **Request Body:**
 ```json
@@ -291,15 +347,15 @@
 
 ### POST /api/Expense/editUserSplit
 
-**Description:** Edits an existing user's split within an expense.
+**Description:** Edits an existing user's split in an expense.
 
 **Requirements:**
-- The user split exists.
-- If a new user is specified, that user does not already have a split in the same expense.
-- The amount owed is non-negative.
+- UserSplit exists.
+- Amount owed is non-negative.
+- If user is changed, the new user does not already have a split in the same expense.
 
 **Effects:**
-- Updates the user or amount owed for the specified user split.
+- Updates the UserSplit document.
 
 **Request Body:**
 ```json
@@ -330,12 +386,12 @@
 **Description:** Removes a user's split from an expense.
 
 **Requirements:**
-- The expense exists.
-- The user split exists within the specified expense.
+- Expense exists.
+- UserSplit exists and is associated with the expense.
 
 **Effects:**
 - Removes the UserSplit document.
-- Removes the UserSplit's ID from the expense's `userSplits` array.
+- Removes the UserSplit ID from the expense's userSplits array.
 
 **Request Body:**
 ```json
@@ -360,10 +416,7 @@
 
 ### POST /api/Expense/_getExpensesByGroup
 
-**Description:** Retrieves all expenses associated with a specific group.
-
-**Effects:**
-- Returns an array of expense documents belonging to the specified group.
+**Description:** Retrieves all expenses belonging to a specific group.
 
 **Request Body:**
 ```json
@@ -401,9 +454,6 @@
 
 **Description:** Retrieves a specific expense by its ID.
 
-**Effects:**
-- Returns the expense document if found.
-
 **Request Body:**
 ```json
 {
@@ -440,9 +490,6 @@
 
 **Description:** Retrieves a specific user split by its ID.
 
-**Effects:**
-- Returns the user split document if found.
-
 **Request Body:**
 ```json
 {
@@ -474,9 +521,6 @@
 
 **Description:** Retrieves all user splits associated with a given expense.
 
-**Effects:**
-- Returns an array of user split documents for the specified expense.
-
 **Request Body:**
 ```json
 {
@@ -504,12 +548,41 @@
 ```
 ---
 
+### POST /api/Expense/_getSplitForExpense
+
+**Description:** Retrieves a specific user's split for a given expense.
+
+**Request Body:**
+```json
+{
+  "expenseId": "ID",
+  "user": "ID"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "_id": "ID",
+    "user": "ID",
+    "amountOwed": "number",
+    "expense": "ID"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+
 ### POST /api/Expense/_getExpensesByUser
 
-**Description:** Retrieves all expenses where the user is either the payer or a participant in a user split.
-
-**Effects:**
-- Returns an array of all expense documents involving the specified user.
+**Description:** Retrieves all expenses where the user is either the payer or a participant.
 
 **Request Body:**
 ```json
@@ -542,24 +615,24 @@
 }
 ```
 ---
-
 # API Specification: Group Concept
 
-**Purpose:** To manage user groups, allowing users to create, join, leave, and be removed from groups.
+**Purpose:** Manages user groups and their memberships.
 
 ---
 
+## API Endpoints
+
 ### POST /api/Group/createGroup
 
-**Description:** Creates a new group with a specified creator, name, and description.
+**Description:** Creates a new group.
 
 **Requirements:**
-- The creator user exists.
-- The name and description are provided.
+- Creator exists.
+- Name and description are provided.
 
 **Effects:**
-- Creates a new group record.
-- Adds the creator as the first member of the group.
+- Creates a new group document.
 
 **Request Body:**
 ```json
@@ -590,10 +663,10 @@
 **Description:** Adds a new member to an existing group.
 
 **Requirements:**
-- The group exists.
-- The inviter is a member of the group.
-- The new member is not already in the group.
-- The new member user exists.
+- Group exists.
+- Inviter is a member of the group.
+- New member is not already in the group.
+- User exists.
 
 **Effects:**
 - Adds the new member to the group's member list.
@@ -625,9 +698,9 @@
 **Description:** Removes a member from a group.
 
 **Requirements:**
-- The group exists.
-- The remover is a member of the group.
-- The member to remove is currently in the group.
+- Group exists.
+- Remover is a member of the group.
+- Member to remove is in the group.
 
 **Effects:**
 - Removes the specified member from the group's member list.
@@ -656,11 +729,11 @@
 
 ### POST /api/Group/leaveGroup
 
-**Description:** Allows a member to leave a group they are currently in.
+**Description:** Allows a member to leave a group.
 
 **Requirements:**
-- The group exists.
-- The member is currently in the group.
+- Group exists.
+- Member is in the group.
 
 **Effects:**
 - Removes the member from the group's member list.
@@ -691,11 +764,11 @@
 **Description:** Deletes a group.
 
 **Requirements:**
-- The group exists.
-- The group has no active members.
+- Group exists.
+- Group has no active members.
 
 **Effects:**
-- Removes the group record from the database.
+- Deletes the group document.
 
 **Request Body:**
 ```json
@@ -719,10 +792,7 @@
 
 ### POST /api/Group/_listMembers
 
-**Description:** Lists all members of a specific group.
-
-**Effects:**
-- Returns an array of user IDs representing the members of the group.
+**Description:** Lists all members of a group.
 
 **Request Body:**
 ```json
@@ -745,29 +815,31 @@
 }
 ```
 ---
-
 # API Specification: Folder Concept
 
-**Purpose:** To allow users to organize groups into custom folder structures.
+**Purpose:** Allows users to organize groups into custom structures.
 
 ---
 
+## API Endpoints
+
 ### POST /api/Folder/createFolder
 
-**Description:** Creates a new folder for a user with a given name.
+**Description:** Creates a new folder with the given name and owner.
 
 **Requirements:**
 - `owner` and `name` are provided.
 - A folder with the given `name` does not already exist for the specified `owner`.
 
 **Effects:**
-- Creates a new folder document with `parent` set to `null` and an empty list of groups.
+- Creates a new folder document.
 
 **Request Body:**
 ```json
 {
   "owner": "ID",
-  "name": "string"
+  "name": "string",
+  "parent": "ID"
 }
 ```
 
@@ -788,14 +860,14 @@
 
 ### POST /api/Folder/moveFolder
 
-**Description:** Moves a folder to become a subfolder of another existing folder for the same user.
+**Description:** Changes the parent of a folder to a new parent.
 
 **Requirements:**
-- `user`, `folderToMove`, and `newParent` are provided.
-- Both folders exist for the specified user.
+- User, folder, and parent are provided.
+- Both folders exist and belong to the user.
 
 **Effects:**
-- Updates the `parent` field of the `folderToMove` to the ID of the `newParent` folder.
+- Updates the parent of the folder to be moved.
 
 **Request Body:**
 ```json
@@ -823,16 +895,15 @@
 
 ### POST /api/Folder/addGroupToFolder
 
-**Description:** Adds a group to a specified folder owned by the user.
+**Description:** Adds a group to the specified folder.
 
 **Requirements:**
-- `user`, `folderName`, and `group` are provided.
+- User, folder name, and group are provided.
 - A folder with `folderName` exists for the `user`.
-- The `group` is a valid group.
 - The `user` is a member of the `group`.
 
 **Effects:**
-- Adds the `group` ID to the `groups` array of the specified folder, if it's not already present.
+- Adds the group ID to the folder's `groups` array.
 
 **Request Body:**
 ```json
@@ -858,15 +929,16 @@
 
 ### POST /api/Folder/removeGroupFromFolder
 
-**Description:** Removes a group from a specified folder owned by the user.
+**Description:** Removes a group from the specified folder.
 
 **Requirements:**
-- `user`, `folder`, and `group` are provided.
+- User, folder, and group are provided.
 - The specified `folder` exists and belongs to the `user`.
 - The `group` is currently present within the `folder`.
+- The `user` is a member of the `group`.
 
 **Effects:**
-- Removes the `group` ID from the `groups` array of the specified folder.
+- Removes the group ID from the folder's `groups` array.
 
 **Request Body:**
 ```json
@@ -892,15 +964,15 @@
 
 ### POST /api/Folder/deleteFolder
 
-**Description:** Deletes a folder owned by the user. Any groups within the deleted folder are moved to a root folder for the user.
+**Description:** Deletes the folder and moves all its contained groups to the root folder.
 
 **Requirements:**
-- `user` and `folder` are provided.
-- The specified `folder` exists and belongs to the `user`.
+- User and folder are provided.
+- The specified folder exists and belongs to the user.
 
 **Effects:**
 - Deletes the folder document.
-- Moves all groups from the deleted folder to a root folder for the user. If no root folder exists, a warning is logged.
+- Moves contained groups to the root folder.
 
 **Request Body:**
 ```json
@@ -925,15 +997,15 @@
 
 ### POST /api/Folder/renameFolder
 
-**Description:** Renames a folder owned by the user.
+**Description:** Changes the name of a folder.
 
 **Requirements:**
-- `user`, `folder`, and `name` are provided.
-- The specified `folder` exists and the `user` is its owner.
-- The new `name` is not already in use by another folder owned by the same `user`.
+- User, folder, and new name are provided.
+- The specified folder exists and the user is its owner.
+- The new name is not already in use by another folder owned by the same user.
 
 **Effects:**
-- Updates the `name` field of the specified folder document.
+- Updates the name of the folder.
 
 **Request Body:**
 ```json
@@ -961,9 +1033,6 @@
 
 **Description:** Retrieves all folders owned by a specific user.
 
-**Effects:**
-- Returns an array of folder documents belonging to the user.
-
 **Request Body:**
 ```json
 {
@@ -976,7 +1045,7 @@
 [
   {
     "_id": "ID",
-    "parent": "ID | null",
+    "parent": "ID",
     "name": "string",
     "owner": "ID",
     "groups": ["ID"]
@@ -994,10 +1063,11 @@
 
 ### POST /api/Folder/_getFolderById
 
-**Description:** Retrieves a specific folder by its ID, ensuring it belongs to the specified user.
+**Description:** Retrieves a single folder given its ID and user.
 
-**Effects:**
-- Returns the folder document if found and owned by the user.
+**Requirements:**
+- User and folder are provided.
+- Folder must belong to user.
 
 **Request Body:**
 ```json
@@ -1012,7 +1082,7 @@
 [
   {
     "_id": "ID",
-    "parent": "ID | null",
+    "parent": "ID",
     "name": "string",
     "owner": "ID",
     "groups": ["ID"]
@@ -1030,10 +1100,10 @@
 
 ### POST /api/Folder/_listSubfolders
 
-**Description:** Retrieves all direct subfolders of a given parent folder for a specific user.
+**Description:** Retrieves all folders that have the given folder as parent.
 
-**Effects:**
-- Returns an array of folder documents that have the specified `parent` folder as their parent.
+**Requirements:**
+- User and parent folder are provided.
 
 **Request Body:**
 ```json
@@ -1048,7 +1118,7 @@
 [
   {
     "_id": "ID",
-    "parent": "ID | null",
+    "parent": "ID",
     "name": "string",
     "owner": "ID",
     "groups": ["ID"]
@@ -1066,10 +1136,10 @@
 
 ### POST /api/Folder/_listGroupsInFolder
 
-**Description:** Retrieves the IDs of all groups contained within a specific folder owned by the user.
+**Description:** Retrieves the group IDs inside a folder.
 
-**Effects:**
-- Returns an array of group IDs stored in the folder.
+**Requirements:**
+- User and folder are provided.
 
 **Request Body:**
 ```json
@@ -1081,7 +1151,39 @@
 
 **Success Response Body (Query):**
 ```json
-["ID"]
+[
+  "ID"
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+
+### POST /api/Folder/_listGroupsInFolderByName
+
+**Description:** Retrieves the group IDs inside a folder identified by name.
+
+**Requirements:**
+- User and folder name are provided.
+
+**Request Body:**
+```json
+{
+  "user": "ID",
+  "name": "string"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  "ID"
+]
 ```
 
 **Error Response Body:**
@@ -1094,10 +1196,10 @@
 
 ### POST /api/Folder/_getRootFolder
 
-**Description:** Retrieves all top-level folders (those with no parent) for a given user.
+**Description:** Retrieves all top-level folders (parent = null) for a user.
 
-**Effects:**
-- Returns an array of folder documents that are roots for the user.
+**Requirements:**
+- User is provided.
 
 **Request Body:**
 ```json
@@ -1111,7 +1213,7 @@
 [
   {
     "_id": "ID",
-    "parent": "ID | null",
+    "parent": "ID",
     "name": "string",
     "owner": "ID",
     "groups": ["ID"]
@@ -1126,29 +1228,31 @@
 }
 ```
 ---
+# API Specification: Authentication Concept
 
-# API Specification: User Concept
-
-**Purpose:** To manage user accounts, including creation, editing, deletion, and retrieval of user information.
+**Purpose:** Manages user authentication and profile information.
 
 ---
 
-### POST /api/User/createUser
+## API Endpoints
 
-**Description:** Creates a new user account with a username and display name.
+### POST /api/Authentication/createUser
+
+**Description:** Creates a new user account.
 
 **Requirements:**
-- The username must be unique.
-- Username and display name are provided.
+- Username, display name, and password are provided.
+- Username does not already exist.
 
 **Effects:**
-- Creates a new user document in the `users` collection.
+- Creates a new user document.
 
 **Request Body:**
 ```json
 {
   "username": "string",
-  "displayName": "string"
+  "displayName": "string",
+  "password": "string"
 }
 ```
 
@@ -1167,16 +1271,12 @@
 ```
 ---
 
-### POST /api/User/editUser
+### POST /api/Authentication/editUser
 
-**Description:** Edits the display name of an existing user.
-
-**Requirements:**
-- The user ID is provided.
-- The new display name is provided.
+**Description:** Edits an existing user's display name.
 
 **Effects:**
-- Updates the `displayName` of the specified user.
+- Updates the user's display name.
 
 **Request Body:**
 ```json
@@ -1199,15 +1299,12 @@
 ```
 ---
 
-### POST /api/User/deleteUser
+### POST /api/Authentication/deleteUser
 
 **Description:** Deletes a user account.
 
-**Requirements:**
-- The user ID is provided.
-
 **Effects:**
-- Removes the user document from the `users` collection.
+- Deletes the user document.
 
 **Request Body:**
 ```json
@@ -1229,28 +1326,29 @@
 ```
 ---
 
-### POST /api/User/_getUserById
+### POST /api/Authentication/authenticate
 
-**Description:** Retrieves the information for a specific user by their ID.
+**Description:** Authenticates a user with a username and password.
+
+**Requirements:**
+- A User to exist with the given username.
+- The provided password matches the User's password.
 
 **Effects:**
-- Returns the user document if found.
+- Grants access if authentication is successful.
 
 **Request Body:**
 ```json
 {
-  "user": "ID"
+  "username": "string",
+  "password": "unknown"
 }
 ```
 
-**Success Response Body (Query):**
+**Success Response Body (Action):**
 ```json
 {
-  "userInfo": {
-    "_id": "ID",
-    "username": "string",
-    "displayName": "string"
-  }
+  "user": "ID"
 }
 ```
 
@@ -1262,12 +1360,40 @@
 ```
 ---
 
-### POST /api/User/_getUserByUsername
+### POST /api/Authentication/_getUserById
 
-**Description:** Retrieves user information by their username.
+**Description:** Retrieves user information by user ID.
 
-**Effects:**
-- Returns the user document if found.
+**Request Body:**
+```json
+{
+  "user": "ID"
+}
+```
+
+**Success Response Body (Query):**
+```json
+[
+  {
+    "_id": "ID",
+    "username": "string",
+    "displayName": "string",
+    "password": "string"
+  }
+]
+```
+
+**Error Response Body:**
+```json
+{
+  "error": "string"
+}
+```
+---
+
+### POST /api/Authentication/_getUserByUsername
+
+**Description:** Retrieves user information by username.
 
 **Request Body:**
 ```json
@@ -1282,7 +1408,8 @@
   {
     "_id": "ID",
     "username": "string",
-    "displayName": "string"
+    "displayName": "string",
+    "password": "string"
   }
 ]
 ```
@@ -1292,3 +1419,4 @@
 {
   "error": "string"
 }
+```

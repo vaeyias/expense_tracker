@@ -1,6 +1,5 @@
 # implementation
 ```typescript
-
 import { Collection, Db } from "npm:mongodb";
 import { ID } from "@utils/types.ts"; // Assuming ID is a type alias for string with branding
 import { freshID } from "@utils/database.ts";
@@ -191,16 +190,19 @@ export default class DebtConcept {
   /**
    * Lists all debts involving a given user with non-zero balance.
    */
-  async _listDebtsForUser(user: User): Promise<Debt[]> {
-    return await this.debts
+  async _listDebtsForUser({ user }: { user: User }): Promise<Debt[]> {
+    const debtsRes = await this.debts
       .find({
         balance: { $ne: 0 },
         $or: [
           { userA: user },
           { userB: user },
         ],
-      })
-      .toArray();
+      }).toArray();
+
+    console.log(debtsRes);
+
+    return debtsRes;
   }
 
   /**
@@ -208,7 +210,7 @@ export default class DebtConcept {
    * Positive = others owe this user, Negative = this user owes others.
    */
   async _getNetBalance(user: User): Promise<number> {
-    const debts = await this._listDebtsForUser(user);
+    const debts = await this._listDebtsForUser({ user });
     let total = 0;
 
     for (const d of debts) {
@@ -224,6 +226,5 @@ export default class DebtConcept {
     return total;
   }
 }
-
 
 ```

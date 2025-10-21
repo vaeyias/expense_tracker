@@ -2,7 +2,7 @@ import { Collection, Db } from "npm:mongodb";
 import { ID } from "@utils/types.ts";
 import { freshID } from "@utils/database.ts";
 
-const PREFIX = "User" + ".";
+const PREFIX = "Authentication" + ".";
 
 // Generic types of this concept
 type User = ID;
@@ -16,9 +16,10 @@ interface Users {
   _id: User;
   username: string;
   displayName: string;
+  password: string;
 }
 
-export default class UserConcept {
+export default class AuthenticationConcept {
   users: Collection<Users>;
 
   constructor(private readonly db: Db) {
@@ -28,9 +29,11 @@ export default class UserConcept {
   async createUser({
     username,
     displayName,
+    password,
   }: {
     username: string;
     displayName: string;
+    password: string;
   }): Promise<{ user: User } | { error: string }> {
     const existingUser = await this.users.findOne({ username });
     if (existingUser) {
@@ -41,6 +44,7 @@ export default class UserConcept {
       _id: freshID(),
       username,
       displayName,
+      password,
     };
 
     const result = await this.users.insertOne(newUser);
@@ -69,6 +73,38 @@ export default class UserConcept {
     return {};
   }
 
+  /**
+   * Authenticates a user with a username and password.
+   *
+   * @param username - The username to authenticate with.
+   * @param password - The password to authenticate with.
+   * @returns A promise that resolves to either a success object with the authenticated user's ID, or an error object.
+   */
+  async authenticate({
+    username,
+    password,
+  }: {
+    username: string;
+    password: unknown; // Password should be treated as sensitive, ideally hashed before being passed here
+  }): Promise<{ user: User } | { error: string }> {
+    // Requirement: a User to exist with the given username
+    const user = await this.users.findOne({ username });
+    if (!user) {
+      return { error: "User not found." };
+    }
+
+    // Effect: if a User with the given username exists and the given password matches the User's password then access is granted.
+    // Otherwise, access is denied.
+    // In a real-world scenario, you would compare the provided password with the stored hash.
+    const passwordMatch = user.password === String(password); // Placeholder for actual comparison
+
+    if (passwordMatch) {
+      return { user: user._id };
+    } else {
+      return { error: "Invalid password." };
+    }
+  }
+
   async _getUserById(
     { user }: { user: User },
   ): Promise<{ userInfo: Users } | { error: string }> {
@@ -80,7 +116,13 @@ export default class UserConcept {
   }
 
   // For testing and demonstration, a query to get user by username
-  async _getUserByUsername(username: string): Promise<Users | null> {
-    return await this.users.findOne({ username });
+  async _getUserByUsername(
+    { username }: { username: string },
+  ): Promise<{ userInfo: Users } | { error: string }> {
+    const userInfo = await this.users.findOne({ username: username });
+    if (!userInfo) {
+      return { error: "User not found." };
+    }
+    return { userInfo };
   }
 }
