@@ -86,37 +86,38 @@ export default class FolderConcept {
     newParent,
   }: {
     user: User;
-    folderToMove: string;
-    newParent: string;
+    folderToMove: Folder;
+    newParent: Folder | null;
   }): Promise<{ folder: Folder } | { error: string }> {
-    if (!user || !folderToMove || !newParent) {
-      return { error: "Owner, folder, and parent are required." };
+    if (!user || !folderToMove) {
+      return { error: "Owner and folder are required." };
     }
     const existingFolder = await this.folders.findOne({
       owner: user,
-      name: folderToMove,
+      _id: folderToMove,
     });
     if (!existingFolder) {
       return {
         error:
-          `A folder with the name "${folderToMove}" doesn't exist for this user.`,
+          `Current Folder not found: A folder with the id "${folderToMove}" doesn't exist for this user.`,
       };
     }
-
-    const existingParent = await this.folders.findOne({
-      owner: user,
-      name: newParent,
-    });
+    let existingParent = null;
+    if (newParent) {
+      existingParent = await this.folders.findOne({
+        owner: user,
+        _id: newParent,
+      });
+    }
     if (!existingParent) {
-      return {
-        error:
-          `A folder with the name "${newParent}" doesn't exist for this user.`,
-      };
+      await this.folders.updateOne({ _id: existingFolder._id }, {
+        $set: { parent: null },
+      });
+    } else {
+      await this.folders.updateOne({ _id: existingFolder._id }, {
+        $set: { parent: existingParent._id },
+      });
     }
-
-    await this.folders.updateOne({ _id: existingFolder._id }, {
-      $set: { parent: existingParent._id },
-    });
 
     return { folder: existingFolder._id };
   }
@@ -162,7 +163,6 @@ export default class FolderConcept {
     // Note: The original prompt mentions "user is in the group" as a requirement,
     // but the concept state doesn't directly track group membership for users.
     // Assuming this check is handled by other concepts or business logic.
-
     if (!folder.groups.includes(group)) {
       await this.folders.updateOne(
         { _id: folder._id },
@@ -198,11 +198,11 @@ export default class FolderConcept {
     folder: Folder;
     group: Group;
   }): Promise<Empty | { error: string }> {
-    if (!user || !folder || !group) {
+    if (!user || !group) {
       return { error: "User, folder, and group are required." };
     }
 
-    const folderDoc = await this.folders.findOne({ _id: folder, owner: user });
+    const folderDoc = await this.folders.findOne({ _id: folder });
     if (!folderDoc) {
       return { error: `Folder "${folder}" not found for user ${user}.` };
     }
@@ -210,7 +210,6 @@ export default class FolderConcept {
     if (!folderDoc.groups.includes(group)) {
       return { error: `Group "${group}" is not in folder "${folder}".` };
     }
-
     await this.folders.updateOne(
       { _id: folder },
       { $pull: { groups: group } },
@@ -246,44 +245,61 @@ export default class FolderConcept {
       return { error: "User and folder are required." };
     }
 
+    // Find the folder to delete
     const folderDoc = await this.folders.findOne({ _id: folder, owner: user });
     if (!folderDoc) {
       return { error: `Folder "${folder}" not found for user ${user}.` };
     }
 
+    const parentFolderId = folderDoc.parent || null; // null if this is a root folder
     const groupsToMove = folderDoc.groups;
+
+    // Find all child folders of this folder
+    const childFolders = await this.folders.find({ parent: folder }).toArray();
 
     // Delete the folder
     await this.folders.deleteOne({ _id: folder });
 
-    // Move groups to the home page (root).
-    // This assumes that a user's root "home page" is represented by folders with parent: null.
-    // If a user has multiple root folders, this needs clarification on where to move them.
-    // For simplicity, we'll assume they are added to a conceptual "root" or a designated root folder if one exists.
-
-    // A more robust approach would be to find the user's primary "home" folder (parent: null).
-    // For this implementation, we will search for *any* root folder for the user.
-    // If multiple exist, this is ambiguous. A better design might enforce one root folder or a specific "inbox" concept.
-
-    const rootFolderForUser = await this.folders.findOne({
-      owner: user,
-      name: ".root",
-    });
-
-    if (rootFolderForUser) {
+    // Move groups to parent folder
+    if (parentFolderId) {
       await this.folders.updateOne(
-        { _id: rootFolderForUser._id },
+        { _id: parentFolderId },
         { $addToSet: { groups: { $each: groupsToMove } } },
       );
+
+      // Move child folders to parent folder
+      for (const child of childFolders) {
+        await this.folders.updateOne(
+          { _id: child._id },
+          { $set: { parent: parentFolderId } },
+        );
+      }
     } else {
-      // If no root folder exists, create one implicitly or log a warning.
-      // For now, we'll assume this is an edge case or handled by application setup.
-      // In a real scenario, you might create a default root folder here.
-      console.warn(
-        `No root folder found for user ${user} to move groups from deleted folder ${folder}. Groups may be orphaned.`,
-      );
-      // Alternatively, if groups are directly associated with the user in another concept,
-      // you might update that concept here. For this concept, we're limited to folder state.
+      // If folder has no parent (root), move groups/folders to a default root
+      const rootFolderForUser = await this.folders.findOne({
+        owner: user,
+        name: ".root",
+      });
+
+      if (rootFolderForUser) {
+        await this.folders.updateOne(
+          { _id: rootFolderForUser._id },
+          {
+            $addToSet: { groups: { $each: groupsToMove } },
+          },
+        );
+
+        for (const child of childFolders) {
+          await this.folders.updateOne(
+            { _id: child._id },
+            { $set: { parent: rootFolderForUser._id } },
+          );
+        }
+      } else {
+        console.warn(
+          `No root folder found for user ${user}. Groups and subfolders from deleted folder ${folder} may be orphaned.`,
+        );
+      }
     }
 
     return {};
@@ -320,7 +336,7 @@ export default class FolderConcept {
 
     const folderDoc = await this.folders.findOne({ _id: folder, owner: user });
     if (!folderDoc) {
-      return { error: `Folder "${folder}" not found for user ${user}.` };
+      return { error: `Folder "${folder}" not found.` };
     }
 
     // Check if a folder with the new name already exists for this owner
@@ -330,8 +346,7 @@ export default class FolderConcept {
     });
     if (existingFolder && existingFolder._id !== folder) {
       return {
-        error:
-          `A folder with the name "${name}" already exists for this owner.`,
+        error: `A folder with the name "${name}" already exists.`,
       };
     }
 
@@ -434,6 +449,28 @@ export default class FolderConcept {
     return folderDoc.groups;
   }
 
+  async _getFolderByGroupAndUser({
+    user,
+    group,
+  }: {
+    user: User;
+    group: Group;
+  }): Promise<Folders | { error: string }> {
+    if (!user || !group) {
+      return { error: "User and group are required." };
+    }
+
+    const folderDoc = await this.folders.findOne({
+      groups: group,
+      owner: user,
+    });
+    if (!folderDoc) {
+      return { error: `Folder not found for user ${user} in group ${group}.` };
+    }
+
+    return folderDoc;
+  }
+
   async _listGroupsInFolderByName({
     user,
     name,
@@ -453,6 +490,23 @@ export default class FolderConcept {
     return folderDoc.groups;
   }
 
+  async _getRootId({
+    user,
+  }: {
+    user: User;
+  }): Promise<Folders[] | { error: string }> {
+    if (!user) {
+      return { error: "User is required." };
+    }
+
+    const roots = await this.folders.find({
+      owner: user,
+      parent: ".parent_root" as Folder,
+    })
+      .toArray();
+    return roots;
+  }
+
   /**
    * Query: _getRootFolder
    * Effect: Returns all top-level folders (parent = null) for a user.
@@ -466,7 +520,10 @@ export default class FolderConcept {
       return { error: "User is required." };
     }
 
-    const roots = await this.folders.find({ owner: user, parent: null })
+    const roots = await this.folders.find({
+      owner: user,
+      parent: null,
+    })
       .toArray();
     return roots;
   }

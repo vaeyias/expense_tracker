@@ -179,8 +179,8 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       console.log("[3] Moving FolderA inside FolderB...");
       const moveA = await folderConcept.moveFolder({
         user: alice,
-        folderToMove: "FolderA",
-        newParent: "FolderB",
+        folderToMove: folderA,
+        newParent: folderB,
       });
       assertNotEquals(
         "error" in moveA,
@@ -197,8 +197,8 @@ Deno.test("--------------- ðŸ“‚ FolderConcept - full workflow and edge cases ðŸ“
       console.log("[3] Moving FolderC inside FolderA (nested move)...");
       const moveC = await folderConcept.moveFolder({
         user: alice,
-        folderToMove: "FolderC",
-        newParent: "FolderA",
+        folderToMove: folderC,
+        newParent: folderA,
       });
       assertNotEquals("error" in moveC, true);
 

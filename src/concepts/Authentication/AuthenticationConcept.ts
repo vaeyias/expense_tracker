@@ -35,14 +35,16 @@ export default class AuthenticationConcept {
     displayName: string;
     password: string;
   }): Promise<{ user: User } | { error: string }> {
-    const existingUser = await this.users.findOne({ username });
+    const existingUser = await this.users.findOne({
+      username: username.toLowerCase(),
+    });
     if (existingUser) {
       return { error: "Username already exists." };
     }
 
     const newUser = {
       _id: freshID(),
-      username,
+      username: username.toLowerCase(),
       displayName,
       password,
     };
@@ -88,7 +90,7 @@ export default class AuthenticationConcept {
     password: unknown; // Password should be treated as sensitive, ideally hashed before being passed here
   }): Promise<{ user: User } | { error: string }> {
     // Requirement: a User to exist with the given username
-    const user = await this.users.findOne({ username });
+    const user = await this.users.findOne({ username: username.toLowerCase() });
     if (!user) {
       return { error: "User not found." };
     }
@@ -119,7 +121,9 @@ export default class AuthenticationConcept {
   async _getUserByUsername(
     { username }: { username: string },
   ): Promise<{ userInfo: Users } | { error: string }> {
-    const userInfo = await this.users.findOne({ username: username });
+    const userInfo = await this.users.findOne({
+      username: username.toLowerCase(),
+    });
     if (!userInfo) {
       return { error: "User not found." };
     }

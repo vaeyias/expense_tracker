@@ -198,8 +198,6 @@ export default class DebtConcept {
         ],
       }).toArray();
 
-    console.log(debtsRes);
-
     return debtsRes;
   }
 

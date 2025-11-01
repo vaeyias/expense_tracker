@@ -9,7 +9,7 @@ concept Authentication
 
     actions
         register (username: String, password: String): (user: User)
-            requires username to not already exist
+            requires username (not case sensitive) to not already exist
             effects creates a new User with given username and password
 
         authenticate (username: String, password: String): (user: User)
