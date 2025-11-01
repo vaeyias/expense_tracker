@@ -27,6 +27,11 @@
 - In Assignment 2, I did not explicit define my User concept. In my implementation here, I implement a User concept.
 - *See concept-specific design logs for other design changes.*
 
+# Changes in backend when implemetning Assignment 4b
+- No major concept design changes
+- Mostly additions of new queries to complete features of the frontend
+  - For example, query getting all subfolders of a folder.
+
 ## Interesting Moments
 
 ### 1. LLM Concept Implementation Throwing Errors Instead of Returning Them
