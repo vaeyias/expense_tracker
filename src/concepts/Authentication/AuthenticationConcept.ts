@@ -11,12 +11,14 @@ type User = ID;
  * a set of Users with
  *   a username String
  *   a displayName String
+ *   optional token for authentication
  */
 interface Users {
   _id: User;
   username: string;
   displayName: string;
   password: string;
+  token?: string;
 }
 
 export default class AuthenticationConcept {
@@ -50,7 +52,7 @@ export default class AuthenticationConcept {
     };
 
     const result = await this.users.insertOne(newUser);
-    const userId = result.insertedId.toString() as User; // Assuming ObjectId is converted to string for User ID
+    const userId = result.insertedId.toString() as User;
 
     return { user: userId };
   }
@@ -58,9 +60,10 @@ export default class AuthenticationConcept {
   async editUser(
     { user, newDisplayName }: { user: User; newDisplayName: string },
   ): Promise<{}> {
-    const result = await this.users.findOneAndUpdate({
-      _id: user,
-    }, { $set: { displayName: newDisplayName } });
+    const result = await this.users.findOneAndUpdate(
+      { _id: user },
+      { $set: { displayName: newDisplayName } },
+    );
     if (!result) {
       return { error: "User not found." };
     }
@@ -76,35 +79,32 @@ export default class AuthenticationConcept {
   }
 
   /**
-   * Authenticates a user with a username and password.
-   *
-   * @param username - The username to authenticate with.
-   * @param password - The password to authenticate with.
-   * @returns A promise that resolves to either a success object with the authenticated user's ID, or an error object.
+   * Authenticates a user with a username and password, returns a token.
    */
   async authenticate({
     username,
     password,
   }: {
     username: string;
-    password: unknown; // Password should be treated as sensitive, ideally hashed before being passed here
-  }): Promise<{ user: User } | { error: string }> {
-    // Requirement: a User to exist with the given username
+    password: unknown;
+  }): Promise<{ user: User; token: string } | { error: string }> {
     const user = await this.users.findOne({ username: username.toLowerCase() });
     if (!user) {
       return { error: "User not found." };
     }
 
-    // Effect: if a User with the given username exists and the given password matches the User's password then access is granted.
-    // Otherwise, access is denied.
-    // In a real-world scenario, you would compare the provided password with the stored hash.
-    const passwordMatch = user.password === String(password); // Placeholder for actual comparison
-
-    if (passwordMatch) {
-      return { user: user._id };
-    } else {
+    const passwordMatch = user.password === String(password);
+    if (!passwordMatch) {
       return { error: "Invalid password." };
     }
+
+    // Generate a simple token (replace with JWT in production)
+    const token = freshID() as string;
+
+    // Save token in user record
+    await this.users.updateOne({ _id: user._id }, { $set: { token } });
+
+    return { user: user._id, token };
   }
 
   async _getUserById(
@@ -117,7 +117,6 @@ export default class AuthenticationConcept {
     return { userInfo };
   }
 
-  // For testing and demonstration, a query to get user by username
   async _getUserByUsername(
     { username }: { username: string },
   ): Promise<{ userInfo: Users } | { error: string }> {
@@ -128,5 +127,18 @@ export default class AuthenticationConcept {
       return { error: "User not found." };
     }
     return { userInfo };
+  }
+
+  /**
+   * Validates a token for sync guards.
+   */
+  async _validateToken(
+    { token }: { token: string },
+  ): Promise<{ user: User } | { error: string }> {
+    const user = await this.users.findOne({ token });
+    if (!user) {
+      return { error: "Invalid token." };
+    }
+    return { user: user._id };
   }
 }

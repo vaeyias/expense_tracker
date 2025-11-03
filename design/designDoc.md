@@ -17,6 +17,11 @@
 - [User Design Log](concepts/User/designLog.md)
 
 
+# Final Assignment Changes
+
+- modify authenthication concept to return session tokens to authenticate the user.
+- modify all actions to take in a session id used to authenticate the user insted of a UserID.
+
 ## Major Design Changes from Assignment 2
 
 - In Assignment 2, I had a PersonalExpenseTracker concept and GroupExpenseTracker concept. In this iteration, I merged the two concepts into a single Expense concept and introduce a new indepedent Group concept for handling user groupings:
