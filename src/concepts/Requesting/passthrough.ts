@@ -28,6 +28,13 @@ export const inclusions: Record<string, string> = {
   "/api/Folder/_getRootFolder": "get root folders",
   "/api/Folder/listSubfolders": "list subfolders",
   "/api/Folder/getRootFolder": "get root folders",
+  "/api/Group/_listMembers": "list members of a group",
+  "/api/Expense/_getExpensesByGroup": "get expenses by group",
+  "/api/Expense/_getExpenseById": "get expense by ID",
+  "/api/Expense/_getUserSplitById": "get user split by ID",
+  "/api/Expense/_getSplitsByExpense": "get splits by expense",
+  "/api/Expense/_getSplitForExpense": "get split for expense",
+  "/api/Expense/_getExpensesByUser": "get expenses by user",
 };
 
 /**
@@ -56,12 +63,6 @@ export const exclusions: Array<string> = [
   "/api/Expense/addUserSplit",
   "/api/Expense/editUserSplit",
   "/api/Expense/removeUserSplit",
-  "/api/Expense/_getExpensesByGroup",
-  "/api/Expense/_getExpenseById",
-  "/api/Expense/_getUserSplitById",
-  "/api/Expense/_getSplitsByExpense",
-  "/api/Expense/_getSplitForExpense",
-  "/api/Expense/_getExpensesByUser",
 
   // Folder routes
   "/api/Folder/createFolder",
@@ -77,8 +78,13 @@ export const exclusions: Array<string> = [
   "/api/Group/removeUser",
   "/api/Group/leaveGroup",
   "/api/Group/deleteGroup",
-  "/api/Group/_listMembers",
   "/api/Group/isMember",
   "/api/Group/groupExists",
   "/api/Group/userExists",
+
+  "/api/Group/createGroupAndAddToFolder",
+  "/api/Group/addUserAndSetup",
+  "/api/Group/removeUserAndCleanup",
+  "/api/Group/leaveGroupAndCleanup",
+  "/api/Expense/createExpenseFull",
 ];
