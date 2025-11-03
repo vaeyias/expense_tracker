@@ -195,14 +195,16 @@ export default class GroupConcept {
    */
   async _listMembers(
     { group }: { group: Group },
-  ): Promise<{ members: User[] } | { error: string }> {
+  ): Promise<ID[]> {
     const groupDoc = await this.groups.findOne({ _id: group });
 
     if (!groupDoc) {
-      return { error: "Group not found." };
+      return [];
     }
 
-    return { members: groupDoc.members };
+    console.log(groupDoc.members);
+
+    return await groupDoc.members;
   }
 
   // Helper to get group by ID for other operations
