@@ -4,12 +4,11 @@
 - The original concept was integrated in my GroupExpenseTracker concept specification.
 
 
-## Changes While Implementing Group
+## Changes While Implementing
 - ### Draft #1 of Group Specification:
-[Draft #1](../../../context/design/concepts/Group/Group.md/steps/_.85a1a0b3.md)
+    - [Draft #1](../../../context/design/concepts/Group/Group.md/steps/_.85a1a0b3.md)
 
-[Implementation Draft #1](../../../context/design/concepts/Group/implementation.md/steps/response.b8d0dbe3.md)
-
+    - [Implementation Draft #1](../../../context/design/concepts/Group/implementation.md/steps/response.b8d0dbe3.md)
 
 
 
@@ -22,6 +21,6 @@ After allowing the creator of the group to leave. I realized there might be a ca
 
 - After these two changes:
 
-[Concept Draft #2](../../../context/design/concepts/Group/Group.md/steps/_.405601ea)
+    - [Concept Draft #2](../../../context/design/concepts/Group/Group.md/steps/_.405601ea)
 
- [Implementation Draft #2](../../../context/design/concepts/Group/implementation.md/steps/_.23003ada.md)
+    - [Implementation Draft #2](../../../context/design/concepts/Group/implementation.md/steps/_.23003ada.md)

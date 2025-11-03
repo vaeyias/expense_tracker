@@ -54,6 +54,7 @@ export default class FolderConcept {
       return { error: "Owner and folder name are required." };
     }
 
+    console.log("CREAITN FOLDER");
     const existingFolder = await this.folders.findOne({ owner, name });
     if (existingFolder) {
       return {
@@ -411,7 +412,7 @@ export default class FolderConcept {
    * Query: _listSubfolders
    * Effect: Returns all folders that have the given folder as parent.
    */
-  async _listSubfolders({
+  async listSubfolders({
     user,
     parent,
   }: {
@@ -494,11 +495,7 @@ export default class FolderConcept {
     user,
   }: {
     user: User;
-  }): Promise<Folders[] | { error: string }> {
-    if (!user) {
-      return { error: "User is required." };
-    }
-
+  }): Promise<Folders[]> {
     const roots = await this.folders.find({
       owner: user,
       parent: ".parent_root" as Folder,
@@ -511,15 +508,11 @@ export default class FolderConcept {
    * Query: _getRootFolder
    * Effect: Returns all top-level folders (parent = null) for a user.
    */
-  async _getRootFolder({
+  async getRootFolder({
     user,
   }: {
     user: User;
-  }): Promise<Folders[] | { error: string }> {
-    if (!user) {
-      return { error: "User is required." };
-    }
-
+  }): Promise<Folders[]> {
     const roots = await this.folders.find({
       owner: user,
       parent: null,

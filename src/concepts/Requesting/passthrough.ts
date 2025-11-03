@@ -15,6 +15,9 @@ export const inclusions: Record<string, string> = {
   "/api/Authentication/authenticate": "required for login",
   "/api/Authentication/_getUserById": "lookup user info by ID",
   "/api/Authentication/_getUserByUsername": "lookup user info by username",
+  "/api/Authentication/validateToken": "validate session tokens",
+  "/api/Authentication/logout": "logout user",
+  "/api/Authentication/testingSomething": "testing endpoint",
 };
 
 /**
@@ -65,6 +68,8 @@ export const exclusions: Array<string> = [
   "/api/Folder/_listGroupsInFolderByName",
   "/api/Folder/_getRootId",
   "/api/Folder/_getRootFolder",
+  "/api/Folder/getRootFolder",
+  "/api/Folder/listSubfolders",
 
   // Group routes
   "/api/Group/createGroup",

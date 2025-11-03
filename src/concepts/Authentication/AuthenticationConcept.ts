@@ -4,14 +4,11 @@ import { freshID } from "@utils/database.ts";
 
 const PREFIX = "Authentication" + ".";
 
-// Generic types of this concept
+// Generic type for User ID
 type User = ID;
 
 /**
- * a set of Users with
- *   a username String
- *   a displayName String
- *   optional token for authentication
+ * Represents a user in the system
  */
 interface Users {
   _id: User;
@@ -28,6 +25,9 @@ export default class AuthenticationConcept {
     this.users = this.db.collection(PREFIX + "users");
   }
 
+  /**
+   * Create a new user
+   */
   async createUser({
     username,
     displayName,
@@ -40,15 +40,18 @@ export default class AuthenticationConcept {
     const existingUser = await this.users.findOne({
       username: username.toLowerCase(),
     });
+
     if (existingUser) {
       return { error: "Username already exists." };
     }
+    console.log("Creating user with username:", username);
 
     const newUser = {
       _id: freshID(),
       username: username.toLowerCase(),
       displayName,
       password,
+      token: undefined,
     };
 
     const result = await this.users.insertOne(newUser);
@@ -57,29 +60,50 @@ export default class AuthenticationConcept {
     return { user: userId };
   }
 
-  async editUser(
-    { user, newDisplayName }: { user: User; newDisplayName: string },
-  ): Promise<{}> {
+  /**
+   * Edit user's display name
+   */
+  async editUser({
+    user,
+    token,
+    newDisplayName,
+  }: {
+    user: User;
+    token: string;
+    newDisplayName: string;
+  }): Promise<{} | { error: string }> {
+    const validation = await this.validateToken({ user, token });
+    if ("error" in validation) return { error: "Invalid token." };
+
     const result = await this.users.findOneAndUpdate(
       { _id: user },
       { $set: { displayName: newDisplayName } },
     );
-    if (!result) {
-      return { error: "User not found." };
-    }
-    return {};
-  }
 
-  async deleteUser({ user }: { user: User }): Promise<{}> {
-    const result = await this.users.deleteOne({ _id: user });
-    if (result.deletedCount === 0) {
-      return { error: "User not found." };
-    }
+    if (!result) return { error: "User not found." };
     return {};
   }
 
   /**
-   * Authenticates a user with a username and password, returns a token.
+   * Delete a user
+   */
+  async deleteUser({
+    user,
+    token,
+  }: {
+    user: User;
+    token: string;
+  }): Promise<{} | { error: string }> {
+    const validation = await this.validateToken({ user, token });
+    if ("error" in validation) return { error: "Invalid token." };
+
+    const result = await this.users.deleteOne({ _id: user });
+    if (result.deletedCount === 0) return { error: "User not found." };
+    return {};
+  }
+
+  /**
+   * Authenticate a user, returns a token
    */
   async authenticate({
     username,
@@ -88,57 +112,83 @@ export default class AuthenticationConcept {
     username: string;
     password: unknown;
   }): Promise<{ user: User; token: string } | { error: string }> {
-    const user = await this.users.findOne({ username: username.toLowerCase() });
-    if (!user) {
-      return { error: "User not found." };
-    }
+    const user = await this.users.findOne({
+      username: username.toLowerCase(),
+    });
 
-    const passwordMatch = user.password === String(password);
-    if (!passwordMatch) {
+    if (!user) return { error: "User not found." };
+    if (user.password !== String(password)) {
       return { error: "Invalid password." };
     }
 
-    // Generate a simple token (replace with JWT in production)
     const token = freshID() as string;
-
-    // Save token in user record
     await this.users.updateOne({ _id: user._id }, { $set: { token } });
 
     return { user: user._id, token };
   }
 
-  async _getUserById(
-    { user }: { user: User },
-  ): Promise<{ userInfo: Users } | { error: string }> {
-    const userInfo = await this.users.findOne({ _id: user });
-    if (!userInfo) {
-      return { error: "User not found." };
-    }
-    return { userInfo };
+  /**
+   * Validate a token for a given user
+   */
+
+  async testingSomething() {
+    console.log("Hello world");
+  }
+  async validateToken({
+    user,
+    token,
+  }: {
+    user: User;
+    token: string;
+  }): Promise<{ user: User } | { error: string }> {
+    console.log("HIII");
+    const foundUser = await this.users.findOne({ _id: user, token: token });
+    // console.log(`ABout toValidated token for user: ${foundUser.username}`);
+
+    if (!foundUser) return { error: "User not authenticated. Please log in." };
+    console.log(`Validated token for user: ${foundUser.username}`);
+    return { user: foundUser._id };
   }
 
-  async _getUserByUsername(
-    { username }: { username: string },
-  ): Promise<{ userInfo: Users } | { error: string }> {
-    const userInfo = await this.users.findOne({
-      username: username.toLowerCase(),
-    });
-    if (!userInfo) {
-      return { error: "User not found." };
-    }
+  async logout({
+    user,
+    token,
+  }: {
+    user: User;
+    token: string;
+  }): Promise<{} | { error: string }> {
+    const validation = await this.validateToken({ user, token });
+    if ("error" in validation) return { error: "Invalid token." };
+
+    await this.users.updateOne({ _id: user }, { $set: { token: undefined } });
+    return {};
+  }
+
+  /**
+   * Get user info by ID
+   */
+  async _getUserById({
+    user,
+  }: {
+    user: User;
+  }): Promise<{ userInfo: Users } | { error: string }> {
+    const userInfo = await this.users.findOne({ _id: user });
+    if (!userInfo) return { error: "User not found." };
     return { userInfo };
   }
 
   /**
-   * Validates a token for sync guards.
+   * Get user info by username
    */
-  async _validateToken(
-    { token }: { token: string },
-  ): Promise<{ user: User } | { error: string }> {
-    const user = await this.users.findOne({ token });
-    if (!user) {
-      return { error: "Invalid token." };
-    }
-    return { user: user._id };
+  async _getUserByUsername({
+    username,
+  }: {
+    username: string;
+  }): Promise<{ userInfo: Users } | { error: string }> {
+    const userInfo = await this.users.findOne({
+      username: username.toLowerCase(),
+    });
+    if (!userInfo) return { error: "User not found." };
+    return { userInfo };
   }
 }

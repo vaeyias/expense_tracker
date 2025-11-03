@@ -129,6 +129,8 @@ export default class RequestingConcept {
       await this.requests.updateOne({ _id: request }, { $set: { response } });
     }
 
+    console.log(`[Requesting] Responded to request: ${request}`);
+
     return { request };
   }
 
