@@ -330,7 +330,7 @@ export default class FolderConcept {
     user: User;
     folder: Folder;
     name: string;
-  }): Promise<Empty | { error: string }> {
+  }): Promise<{ success: true } | { error: string }> {
     if (!user || !folder || !name) {
       return { error: "User, folder, and new name are required." };
     }
@@ -352,7 +352,7 @@ export default class FolderConcept {
     }
 
     await this.folders.updateOne({ _id: folder }, { $set: { name: name } });
-    return {};
+    return { success: true };
   }
 
   /**
@@ -504,11 +504,20 @@ export default class FolderConcept {
     return roots;
   }
 
-  /**
-   * Query: _getRootFolder
-   * Effect: Returns all top-level folders (parent = null) for a user.
-   */
   async getRootFolder({
+    user,
+  }: {
+    user: User;
+  }): Promise<{ folders: Folders[] }> {
+    const roots = await this.folders.find({
+      owner: user,
+      parent: null,
+    })
+      .toArray();
+    return { folders: roots };
+  }
+
+  async _getRootFolder({
     user,
   }: {
     user: User;

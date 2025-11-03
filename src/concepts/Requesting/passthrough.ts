@@ -18,6 +18,15 @@ export const inclusions: Record<string, string> = {
   "/api/Authentication/validateToken": "validate session tokens",
   "/api/Authentication/logout": "logout user",
   "/api/Authentication/testingSomething": "testing endpoint",
+  "/api/Folder/_listFolders": "list all folders",
+  "/api/Folder/_getFolderById": "get folder by ID",
+  "/api/Folder/_listSubfolders": "list subfolders",
+  "/api/Folder/_listGroupsInFolder": "list groups in folder",
+  "/api/Folder/_getFolderByGroupAndUser": "get folder by group and user",
+  "/api/Folder/_listGroupsInFolderByName": "list groups in folder by name",
+  "/api/Folder/_getRootId": "get root folder ID",
+  "/api/Folder/_getRootFolder": "get root folders",
+  "/api/Folder/listSubfolders": "list subfolders",
 };
 
 /**
@@ -31,6 +40,9 @@ export const inclusions: Record<string, string> = {
  */
 
 export const exclusions: Array<string> = [
+  // "/api/Folder/_getRootFolder",
+
+  "/api/Folder/getRootFolder",
   // Debt routes
   "/api/Debt/createDebt",
   "/api/Debt/updateDebt",
@@ -60,16 +72,6 @@ export const exclusions: Array<string> = [
   "/api/Folder/removeGroupFromFolder",
   "/api/Folder/deleteFolder",
   "/api/Folder/renameFolder",
-  "/api/Folder/_listFolders",
-  "/api/Folder/_getFolderById",
-  "/api/Folder/_listSubfolders",
-  "/api/Folder/_listGroupsInFolder",
-  "/api/Folder/_getFolderByGroupAndUser",
-  "/api/Folder/_listGroupsInFolderByName",
-  "/api/Folder/_getRootId",
-  "/api/Folder/_getRootFolder",
-  "/api/Folder/getRootFolder",
-  "/api/Folder/listSubfolders",
 
   // Group routes
   "/api/Group/createGroup",
