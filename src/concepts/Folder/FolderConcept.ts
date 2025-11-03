@@ -241,7 +241,7 @@ export default class FolderConcept {
   }: {
     user: User;
     folder: Folder;
-  }): Promise<Empty | { error: string }> {
+  }): Promise<{ folderDeleted: boolean } | { error: string }> {
     if (!user || !folder) {
       return { error: "User and folder are required." };
     }
@@ -303,7 +303,7 @@ export default class FolderConcept {
       }
     }
 
-    return {};
+    return { folderDeleted: true };
   }
 
   /**
@@ -508,13 +508,13 @@ export default class FolderConcept {
     user,
   }: {
     user: User;
-  }): Promise<{ folders: Folders[] }> {
+  }): Promise<Folders[]> {
     const roots = await this.folders.find({
       owner: user,
       parent: null,
     })
       .toArray();
-    return { folders: roots };
+    return roots;
   }
 
   async _getRootFolder({

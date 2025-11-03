@@ -27,6 +27,7 @@ export const inclusions: Record<string, string> = {
   "/api/Folder/_getRootId": "get root folder ID",
   "/api/Folder/_getRootFolder": "get root folders",
   "/api/Folder/listSubfolders": "list subfolders",
+  "/api/Folder/getRootFolder": "get root folders",
 };
 
 /**
@@ -40,9 +41,6 @@ export const inclusions: Record<string, string> = {
  */
 
 export const exclusions: Array<string> = [
-  // "/api/Folder/_getRootFolder",
-
-  "/api/Folder/getRootFolder",
   // Debt routes
   "/api/Debt/createDebt",
   "/api/Debt/updateDebt",
@@ -80,7 +78,6 @@ export const exclusions: Array<string> = [
   "/api/Group/leaveGroup",
   "/api/Group/deleteGroup",
   "/api/Group/_listMembers",
-  "/api/Group/_getGroup",
   "/api/Group/isMember",
   "/api/Group/groupExists",
   "/api/Group/userExists",
