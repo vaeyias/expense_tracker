@@ -723,62 +723,62 @@ export const ListSubfoldersResponse: Sync = (
 //   ),
 // });
 
-// export const LeaveGroupRequest: Sync = (
-//   { request, group, member, token },
-// ) => ({
-//   when: actions(
-//     [Requesting.request, { path: "/Group/leaveGroup", group, member, token }, {
-//       request,
-//     }],
-//   ),
-//   then: actions(
-//     [Authentication.validateToken, { user: member, token }],
-//   ),
-// });
+export const LeaveGroupRequest: Sync = (
+  { request, group, member, token },
+) => ({
+  when: actions(
+    [Requesting.request, { path: "/Group/leaveGroup", group, member, token }, {
+      request,
+    }],
+  ),
+  then: actions(
+    [Authentication.validateToken, { user: member, token }],
+  ),
+});
 
-// export const LeaveGroupValidate: Sync = (
-//   { request, group, member, token },
-// ) => ({
-//   when: actions(
-//     [Requesting.request, { path: "/Group/leaveGroup", group, member, token }, {
-//       request,
-//     }],
-//     [Authentication.validateToken, { user: member, token }, { user: member }],
-//   ),
-//   then: actions(
-//     [Group.leaveGroup, { group, member }],
-//   ),
-// });
+export const LeaveGroupValidate: Sync = (
+  { request, group, member, token },
+) => ({
+  when: actions(
+    [Requesting.request, { path: "/Group/leaveGroup", group, member, token }, {
+      request,
+    }],
+    [Authentication.validateToken, { user: member, token }, { user: member }],
+  ),
+  then: actions(
+    [Group.leaveGroup, { group, member }],
+  ),
+});
 
-// export const LeaveGroupResponse: Sync = (
-//   { request, group, member, token },
-// ) => ({
-//   when: actions(
-//     [Requesting.request, { path: "/Group/leaveGroup", group, member, token }, {
-//       request,
-//     }],
-//     [Authentication.validateToken, { user: member, token }, { user: member }],
-//     [Group.leaveGroup, {}, {}],
-//   ),
-//   then: actions(
-//     [Requesting.respond, { request }],
-//   ),
-// });
+export const LeaveGroupResponse: Sync = (
+  { request, group, member, token },
+) => ({
+  when: actions(
+    [Requesting.request, { path: "/Group/leaveGroup", group, member, token }, {
+      request,
+    }],
+    [Authentication.validateToken, { user: member, token }, { user: member }],
+    [Group.leaveGroup, {}, { left: true }],
+  ),
+  then: actions(
+    [Requesting.respond, { request }],
+  ),
+});
 
-// export const LeaveGroupResponseError: Sync = (
-//   { request, group, member, token, error },
-// ) => ({
-//   when: actions(
-//     [Requesting.request, { path: "/Group/leaveGroup", group, member, token }, {
-//       request,
-//     }],
-//     [Authentication.validateToken, { user: member, token }, { user: member }],
-//     [Group.leaveGroup, {}, { error }],
-//   ),
-//   then: actions(
-//     [Requesting.respond, { request, error }],
-//   ),
-// });
+export const LeaveGroupResponseError: Sync = (
+  { request, group, member, token, error },
+) => ({
+  when: actions(
+    [Requesting.request, { path: "/Group/leaveGroup", group, member, token }, {
+      request,
+    }],
+    [Authentication.validateToken, { user: member, token }, { user: member }],
+    [Group.leaveGroup, {}, { error }],
+  ),
+  then: actions(
+    [Requesting.respond, { request, error }],
+  ),
+});
 
 export const DeleteGroupRequest: Sync = (
   { request, group, user, token },
@@ -937,7 +937,7 @@ export const AddUserAndSetupRequest: Sync = (
     }, { request }],
   ),
   then: actions(
-    [Authentication.validateToken, { user: inviter, token }],
+    [Authentication.validateToken, { duser: inviter, token }],
   ),
 });
 
@@ -999,7 +999,7 @@ export const AddUserAndSetupResponseError: Sync = (
 });
 
 export const RemoveUserAndCleanupRequest: Sync = (
-  { request, group, remover, member, token },
+  { request, group, remover, member, token, memberFolder },
 ) => ({
   when: actions(
     [Requesting.request, {
@@ -1008,6 +1008,7 @@ export const RemoveUserAndCleanupRequest: Sync = (
       remover,
       member,
       token,
+      memberFolder,
     }, { request }],
   ),
   then: actions(
@@ -1025,10 +1026,9 @@ export const RemoveUserAndCleanupValidate: Sync = (
       remover,
       member,
       token,
+      memberFolder,
     }, { request }],
     [Authentication.validateToken, { user: remover, token }, { user: remover }],
-    // Query for the member's folder that contains the group. Bind as `memberFolder`.
-    [Folder._getFolderByGroupAndUser, { user: member, group }, { memberFolder }],
   ),
   then: actions(
     [Folder.removeGroupFromFolder, {
@@ -1050,11 +1050,11 @@ export const RemoveUserAndCleanupResponse: Sync = (
       remover,
       member,
       token,
+      memberFolder,
     }, { request }],
-  [Authentication.validateToken, { user: remover, token }, { user: remover }],
-  [Folder._getFolderByGroupAndUser, { user: member, group }, { memberFolder }],
-  [Folder.removeGroupFromFolder, {}, {}],
-  [Group.removeUser, {}, {}],
+    [Authentication.validateToken, { user: remover, token }, { user: remover }],
+    [Folder.removeGroupFromFolder, {}, {}],
+    [Group.removeUser, {}, {}],
   ),
   then: actions(
     [Requesting.respond, { request }],
@@ -1062,7 +1062,7 @@ export const RemoveUserAndCleanupResponse: Sync = (
 });
 
 export const LeaveGroupAndCleanupRequest: Sync = (
-  { request, group, member, token },
+  { request, group, member, token, memberFolder },
 ) => ({
   when: actions(
     [Requesting.request, {
@@ -1070,6 +1070,7 @@ export const LeaveGroupAndCleanupRequest: Sync = (
       group,
       member,
       token,
+      memberFolder,
     }, { request }],
   ),
   then: actions(
@@ -1086,10 +1087,9 @@ export const LeaveGroupAndCleanupValidate: Sync = (
       group,
       member,
       token,
+      memberFolder,
     }, { request }],
     [Authentication.validateToken, { user: member, token }, { user: member }],
-    // Bind the member's folder containing the group so backend can remove the group
-    [Folder._getFolderByGroupAndUser, { user: member, group }, { memberFolder }],
   ),
   then: actions(
     [Folder.removeGroupFromFolder, {
@@ -1110,9 +1110,9 @@ export const LeaveGroupAndCleanupResponse: Sync = (
       group,
       member,
       token,
+      memberFolder,
     }, { request }],
     [Authentication.validateToken, { user: member, token }, { user: member }],
-    [Folder._getFolderByGroupAndUser, { user: member, group }, { memberFolder }],
     [Folder.removeGroupFromFolder, {}, {}],
     [Group.leaveGroup, {}, {}],
   ),

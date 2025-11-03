@@ -149,7 +149,7 @@ export default class GroupConcept {
    */
   async leaveGroup(
     { group, member }: { group: Group; member: User },
-  ): Promise<Empty | { error: string }> {
+  ): Promise<{ left: boolean } | { error: string }> {
     const groupDoc = await this.groups.findOne({ _id: group });
 
     if (!groupDoc) {
@@ -163,7 +163,7 @@ export default class GroupConcept {
 
     await this.groups.updateOne({ _id: group }, { $pull: { members: member } });
 
-    return {};
+    return { left: true };
   }
 
   /**
