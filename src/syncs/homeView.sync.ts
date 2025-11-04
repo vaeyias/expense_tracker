@@ -724,34 +724,36 @@ export const ListSubfoldersResponse: Sync = (
 //   ),
 // });
 export const AddUserSplitRequest: Sync = (
-  { request, expense, user, amountOwed, token },
+  { request, expense, creator, user, amountOwed, token },
 ) => ({
   when: actions(
     [Requesting.request, {
       path: "/Expense/addUserSplit",
       expense,
       user,
+      creator,
       amountOwed,
       token,
     }, { request }],
   ),
   then: actions(
-    [Authentication.validateToken, { user, token }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
   ),
 });
 
 export const AddUserSplitValidate: Sync = (
-  { request, expense, user, amountOwed, token },
+  { request, expense, creator, user, amountOwed, token },
 ) => ({
   when: actions(
     [Requesting.request, {
       path: "/Expense/addUserSplit",
       expense,
       user,
+      creator,
       amountOwed,
       token,
     }, { request }],
-    [Authentication.validateToken, { user, token }, { user }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
   ),
   then: actions(
     [Expense.addUserSplit, { expense, user, amountOwed }],
@@ -759,37 +761,188 @@ export const AddUserSplitValidate: Sync = (
 });
 
 export const AddUserSplitResponse: Sync = (
-  { request, expense, user, amountOwed, token },
+  {
+    request,
+    expense,
+    user,
+    creator,
+    amountOwed,
+    token,
+    payer,
+    receiver,
+    amount,
+  },
 ) => ({
   when: actions(
     [Requesting.request, {
       path: "/Expense/addUserSplit",
       expense,
       user,
+      creator,
       amountOwed,
       token,
     }, { request }],
-    [Authentication.validateToken, { user, token }, { user }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
     [Expense.addUserSplit, {}, {}],
   ),
+  where: async (frames) => {
+    // Fetch expense to get payer, then update debt for this split
+    frames = await frames.query(
+      async ({ expense: expenseId, user: userId, amountOwed: owed }) => {
+        const exp = await Expense._getExpenseById({
+          expenseId: expenseId as unknown as ID,
+        });
+        const payerId = exp?.payer as ID | undefined;
+        if (!payerId) return [];
+
+        // The user in the split is the receiver (they owe the payer)
+        return [{
+          payer: payerId,
+          receiver: userId as unknown as ID,
+          amount: owed as number,
+        }];
+      },
+      {
+        expense: expense as unknown as ID,
+        user: user as unknown as ID,
+        amountOwed: amountOwed as unknown as number,
+      },
+      { payer, receiver, amount },
+    );
+
+    return frames;
+  },
   then: actions(
+    [Debt.updateDebt, { payer, receiver, amount }],
     [Requesting.respond, { request }],
   ),
 });
 
 export const AddUserSplitResponseError: Sync = (
-  { request, expense, user, amountOwed, token, error },
+  { request, expense, creator, user, amountOwed, token, error },
 ) => ({
   when: actions(
     [Requesting.request, {
       path: "/Expense/addUserSplit",
       expense,
       user,
+      creator,
       amountOwed,
       token,
     }, { request }],
-    [Authentication.validateToken, { user, token }, { user }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
     [Expense.addUserSplit, {}, { error }],
+  ),
+  then: actions(
+    [Requesting.respond, { request, error }],
+  ),
+});
+
+/* ---------- EXPENSE: REMOVE USER SPLIT (WITH DEBT REVERSAL) ---------- */
+// Note: RemoveUserSplit is typically called as part of authenticated expense editing
+// Auth validation is handled at the expense editing level, so we skip it here
+export const RemoveUserSplitRequest: Sync = (
+  { request, expense, creator, userSplit, token },
+) => ({
+  when: actions(
+    [Requesting.request, {
+      path: "/Expense/removeUserSplit",
+      expense,
+      userSplit,
+      creator,
+      token,
+    }, { request }],
+  ),
+  then: actions([Authentication.validateToken, { user: creator, token }, {
+    user: creator,
+  }]), // No auth validation needed - handled at expense editing level
+});
+
+export const RemoveUserSplitValidate: Sync = (
+  { request, expense, userSplit, token, creator, payer, receiver, amount },
+) => ({
+  when: actions(
+    [Requesting.request, {
+      path: "/Expense/removeUserSplit",
+      expense,
+      userSplit,
+      creator,
+      token,
+    }, { request }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
+  ),
+  where: async (frames) => {
+    // Fetch split and expense info BEFORE deletion to reverse debt later
+    frames = await frames.query(
+      async ({ expense: expenseId, userSplit: splitId }) => {
+        const exp = await Expense._getExpenseById({
+          expenseId: expenseId as unknown as ID,
+        });
+        const payerId = exp?.payer as ID | undefined;
+
+        const split = await Expense._getUserSplitById({
+          userSplit: splitId as unknown as ID,
+        });
+        const receiverId = split?.user as ID | undefined;
+        const amountOwed = split?.amountOwed as number | undefined;
+
+        if (!payerId || !receiverId || amountOwed === undefined) return [];
+
+        // Bind payer/receiver/amount for use in Response phase
+        return [{
+          payer: payerId,
+          receiver: receiverId,
+          amount: -amountOwed, // Negative to reverse the debt
+        }];
+      },
+      {
+        expense: expense as unknown as ID,
+        userSplit: userSplit as unknown as ID,
+      },
+      { payer, receiver, amount },
+    );
+
+    return frames;
+  },
+  then: actions(
+    [Debt.updateDebt, { payer, receiver, amount }],
+    [Expense.removeUserSplit, { expense, userSplit }],
+  ),
+});
+
+export const RemoveUserSplitResponse: Sync = (
+  { request, expense, userSplit, creator, token },
+) => ({
+  when: actions(
+    [Requesting.request, {
+      path: "/Expense/removeUserSplit",
+      expense,
+      userSplit,
+      creator,
+      token,
+    }, { request }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
+    [Expense.removeUserSplit, {}, {}],
+  ),
+  then: actions(
+    // Use the payer/receiver/amount fetched in Validate phase
+    [Requesting.respond, { request }],
+  ),
+});
+
+export const RemoveUserSplitResponseError: Sync = (
+  { request, expense, creator, userSplit, token, error },
+) => ({
+  when: actions(
+    [Requesting.request, {
+      path: "/Expense/removeUserSplit",
+      expense,
+      creator,
+      userSplit,
+      token,
+    }, { request }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
+    [Expense.removeUserSplit, {}, { error }],
   ),
   then: actions(
     [Requesting.respond, { request, error }],
@@ -1252,7 +1405,7 @@ export const CreateExpenseFullRequest: Sync = (
     }, { request }],
   ),
   then: actions(
-    [Authentication.validateToken, { user, token }],
+    [Authentication.validateToken, { user: user, token: token }],
   ),
 });
 
@@ -1271,7 +1424,9 @@ export const CreateExpenseFullValidate: Sync = (
       user,
       token,
     }, { request }],
-    [Authentication.validateToken, { user: user, token }, { user: user }],
+    [Authentication.validateToken, { user: user, token: token }, {
+      user: user,
+    }],
   ),
   then: actions(
     [Expense.createExpense, { user: user, group }],
@@ -1339,7 +1494,7 @@ export const EditExpenseRequest: Sync = (
     payer,
     user,
     expenseToEdit,
-    newExpense,
+    newExpense: _newExpense,
     token,
   },
 ) => ({
@@ -1372,7 +1527,7 @@ export const EditExpenseValidate: Sync = (
     payer,
     category,
     title,
-    newExpense,
+    newExpense: _newExpense,
     description,
     token,
   },
@@ -1395,7 +1550,7 @@ export const EditExpenseValidate: Sync = (
   then: actions(
     [Expense.editExpense, {
       expenseToEdit,
-      newExpense,
+      newExpense: expenseToEdit,
       totalCost,
       token,
       date,
@@ -1418,8 +1573,6 @@ export const EditExpenseResponse: Sync = (
     date,
     token,
     payer,
-    receiver,
-    amount,
     newExpense,
   },
 ) => ({
@@ -1439,53 +1592,20 @@ export const EditExpenseResponse: Sync = (
     [Authentication.validateToken, { user, token }, { user }],
     [Expense.editExpense, {}, { newExpense }],
   ),
-  where: async (frames) => {
-    // After the edit, fetch updated splits and bind payer/receiver/amount
-    frames = await frames.query(
-      async ({ expenseToEdit: id }) => {
-        const exp = await Expense._getExpenseById({
-          expenseId: id as unknown as ID,
-        });
-        const payerId = exp?.payer as ID | undefined;
 
-        const r = await Expense._getSplitsByExpense({
-          expenseId: id as unknown as ID,
-        });
-
-        console.log("splits", r.splits);
-
-        // Return mapped payer/receiver/amount list
-        return (r.splits as { user: ID; amountOwed: number }[])
-          .filter((s) => String(s.user) !== String(payerId))
-          .map((s) => ({
-            payer: payerId,
-            receiver: s.user,
-            amount: s.amountOwed,
-          }));
-      },
-      { expenseToEdit: expenseToEdit as unknown as ID },
-      { payer, receiver, amount },
-    );
-
-    console.log("BIII", frames);
-
-    return frames;
-  },
   then: actions(
-    [Debt.updateDebt, { payer, receiver, amount }],
     [Requesting.respond, { request }],
   ),
 });
 
 export const EditExpenseResponseError: Sync = (
-  { request, user, expenseToEdit, newExpense, token, error },
+  { request, user, expenseToEdit, newExpense: _newExpense, token, error },
 ) => ({
   when: actions(
     [Requesting.request, {
       path: "/Expense/editExpense",
       user,
       expenseToEdit,
-      newExpense,
       token,
     }, { request }],
     [Authentication.validateToken, { user, token }, { user }],
@@ -1505,35 +1625,7 @@ export const DeleteExpenseAndReverseDebts: Sync = (
       request,
     }],
   ),
-  where: async (frames) => {
-    // Fetch expense details and splits, return frames with payer/receiver/amount
-    frames = await frames.query(
-      async ({ expenseToDelete: id }) => {
-        const exp = await Expense._getExpenseById({
-          expenseId: id as unknown as ID,
-        });
-        const payerId = exp?.payer as ID | undefined;
-        const r = await Expense._getSplitsByExpense({
-          expenseId: id as unknown as ID,
-        });
-        return (r.splits as { user: ID; amountOwed: number }[])
-          .filter((s) => String(s.user) !== String(payerId))
-          .map((s) => ({
-            payer: payerId,
-            receiver: s.user,
-            amount: -s.amountOwed,
-          }));
-      },
-      { expenseToDelete: expenseToDelete as unknown as ID },
-      { payer, receiver, amount },
-    );
-
-    return frames;
-  },
   then: actions(
-    // reverse each debt
-    [Debt.updateDebt, { payer, receiver, amount }],
-    // finally delete the expense
     [Expense.deleteExpense, { expenseToDelete }, {}],
     [Requesting.respond, { request }],
   ),
@@ -1623,7 +1715,7 @@ export const CreateDebtResponseError: Sync = (
 });
 
 export const UpdateDebtRequest: Sync = (
-  { request, payer, receiver, amount, token },
+  { request, payer, receiver, amount, creator, token },
 ) => ({
   when: actions(
     [Requesting.request, {
@@ -1632,25 +1724,27 @@ export const UpdateDebtRequest: Sync = (
       receiver,
       amount,
       token,
+      creator,
     }, { request }],
   ),
   then: actions(
-    [Authentication.validateToken, { user: payer, token }, { user: payer }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
   ),
 });
 
 export const UpdateDebtValidate: Sync = (
-  { request, payer, receiver, amount, token },
+  { request, payer, receiver, amount, token, creator },
 ) => ({
   when: actions(
     [Requesting.request, {
       path: "/Debt/updateDebt",
       payer,
       receiver,
+      creator,
       amount,
       token,
     }, { request }],
-    [Authentication.validateToken, { user: payer, token }, { user: payer }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
   ),
   then: actions(
     [Debt.updateDebt, { payer, receiver, amount }],
@@ -1658,7 +1752,7 @@ export const UpdateDebtValidate: Sync = (
 });
 
 export const UpdateDebtResponse: Sync = (
-  { request, payer, receiver, amount, token },
+  { request, payer, receiver, amount, token, creator },
 ) => ({
   when: actions(
     [Requesting.request, {
@@ -1667,8 +1761,9 @@ export const UpdateDebtResponse: Sync = (
       receiver,
       amount,
       token,
+      creator,
     }, { request }],
-    [Authentication.validateToken, { user: payer, token }, { user: payer }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
     [Debt.updateDebt, {}, {}],
   ),
   then: actions(
@@ -1677,7 +1772,7 @@ export const UpdateDebtResponse: Sync = (
 });
 
 export const UpdateDebtResponseError: Sync = (
-  { request, payer, receiver, amount, token, error },
+  { request, payer, receiver, amount, token, error, creator },
 ) => ({
   when: actions(
     [Requesting.request, {
@@ -1686,8 +1781,9 @@ export const UpdateDebtResponseError: Sync = (
       receiver,
       amount,
       token,
+      creator,
     }, { request }],
-    [Authentication.validateToken, { user: payer, token }, { user: payer }],
+    [Authentication.validateToken, { user: creator, token }, { user: creator }],
     [Debt.updateDebt, {}, { error }],
   ),
   then: actions(

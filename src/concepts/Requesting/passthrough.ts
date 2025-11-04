@@ -34,6 +34,8 @@ export const inclusions: Record<string, string> = {
   "/api/Expense/_getSplitsByExpense": "get splits by expense",
   "/api/Expense/_getSplitForExpense": "get split for expense",
   "/api/Expense/_getExpensesByUser": "get expenses by user",
+  "/api/Debt/_listDebtsForUser": "list debts",
+  "/api/Debt/_getNetBalance": "get balance",
   // "/api/Group/_listMembers": "list members of a group",
 };
 
@@ -55,8 +57,6 @@ export const exclusions: Array<string> = [
   "/api/Debt/updateDebt",
   "/api/Debt/deleteDebt",
   "/api/Debt/getDebt",
-  "/api/Debt/_listDebtsForUser",
-  "/api/Debt/_getNetBalance",
 
   // Expense routes
   "/api/Expense/createExpense",
