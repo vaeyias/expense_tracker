@@ -1617,17 +1617,90 @@ export const EditExpenseResponseError: Sync = (
 });
 
 // When an expense is deleted, reverse debts for all splits then delete the expense
-export const DeleteExpenseAndReverseDebts: Sync = (
-  { request, expenseToDelete, payer, receiver, amount },
+export const DeleteExpenseRequest: Sync = (
+  {
+    request,
+    user,
+    expenseToDelete,
+    token,
+  },
 ) => ({
   when: actions(
-    [Requesting.request, { path: "/Expense/deleteExpense", expenseToDelete }, {
-      request,
-    }],
+    [Requesting.request, {
+      path: "/Expense/deleteExpense",
+      user,
+      expenseToDelete,
+      token,
+    }, { request }],
   ),
   then: actions(
-    [Expense.deleteExpense, { expenseToDelete }, {}],
+    [Authentication.validateToken, { user: user, token: token }],
+  ),
+});
+
+export const DeleteExpenseValidate: Sync = (
+  {
+    request,
+    user,
+    expenseToDelete,
+    token,
+  },
+) => ({
+  when: actions(
+    [Requesting.request, {
+      path: "/Expense/deleteExpense",
+      user,
+      expenseToDelete,
+      token,
+    }, { request }],
+    [Authentication.validateToken, { user, token }, { user }],
+  ),
+  then: actions(
+    [Expense.deleteExpense, {
+      expenseToDelete,
+    }],
+  ),
+});
+
+export const DeleteExpenseResponse: Sync = (
+  {
+    request,
+    user,
+    expenseToDelete,
+    token,
+  },
+) => ({
+  when: actions(
+    [Requesting.request, {
+      path: "/Expense/deleteExpense",
+      user,
+      expenseToDelete,
+      token,
+    }, { request }],
+    [Authentication.validateToken, { user, token }, { user }],
+    [Expense.deleteExpense, {}, {}],
+  ),
+
+  then: actions(
     [Requesting.respond, { request }],
+  ),
+});
+
+export const DeleteExpenseResponseError: Sync = (
+  { request, user, expenseToDelete, token, error },
+) => ({
+  when: actions(
+    [Requesting.request, {
+      path: "/Expense/deleteExpense",
+      user,
+      expenseToDelete,
+      token,
+    }, { request }],
+    [Authentication.validateToken, { user, token }, { user }],
+    [Expense.deleteExpense, {}, { error }],
+  ),
+  then: actions(
+    [Requesting.respond, { request, error }],
   ),
 });
 
