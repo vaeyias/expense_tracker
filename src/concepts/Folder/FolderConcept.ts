@@ -293,7 +293,7 @@ export default class FolderConcept {
         for (const child of childFolders) {
           await this.folders.updateOne(
             { _id: child._id },
-            { $set: { parent: rootFolderForUser._id } },
+            { $set: { parent: null } },
           );
         }
       } else {

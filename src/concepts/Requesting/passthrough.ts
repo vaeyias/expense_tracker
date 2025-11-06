@@ -9,9 +9,7 @@
 
 export const inclusions: Record<string, string> = {
   // Authentication routes: included because they are required for login/lookup
-  "/api/Authentication/createUser": "required for creating users",
   "/api/Authentication/editUser": "required for editing user info",
-  "/api/Authentication/deleteUser": "required for deleting users",
   "/api/Authentication/authenticate": "required for login",
   "/api/Authentication/_getUserById": "lookup user info by ID",
   "/api/Authentication/_getUserByUsername": "lookup user info by username",
@@ -36,6 +34,7 @@ export const inclusions: Record<string, string> = {
   "/api/Expense/_getExpensesByUser": "get expenses by user",
   "/api/Debt/_listDebtsForUser": "list debts",
   "/api/Debt/_getNetBalance": "get balance",
+  "/api/Group/_getGroup": "get group",
   // "/api/Group/_listMembers": "list members of a group",
 };
 
@@ -50,6 +49,9 @@ export const inclusions: Record<string, string> = {
  */
 
 export const exclusions: Array<string> = [
+  "/api/Authentication/createUser",
+  "/api/Authentication/deleteUser",
+
   "/api/Group/_listMembers",
 
   // Debt routes
