@@ -9,46 +9,46 @@ import {
 } from "@concepts";
 import { ID } from "@utils/types.ts";
 
-export const ListGroupMembersResponse: Sync = (
-  { request, group, members },
-) => ({
-  when: actions(
-    [Requesting.request, { path: "/Group/_listMembers", group }, {
-      request,
-    }],
-  ),
-  where: async (frames) => {
-    // Resolve member IDs to full user objects so frontend gets User[] in one
-    // request. Use frames.query with an input mapping for `group` so each
-    // incoming frame's bound `group` value is available.
-    frames = await frames.query(
-      async ({ group }) => {
-        const ids = await Group._listMembers({ group });
-        console.log("ids", ids);
-        const users: Record<string, unknown>[] = [];
-        for (const id of ids) {
-          const r = await Authentication._getUserById({
-            user: String(id) as unknown as ID,
-          });
-          const rr = r as {
-            userInfo?: Record<string, unknown>;
-            error?: string;
-          };
-          if (rr.userInfo) users.push(rr.userInfo);
-        }
+// export const ListGroupMembersResponse: Sync = (
+//   { request, group, members },
+// ) => ({
+//   when: actions(
+//     [Requesting.request, { path: "/Group/_listMembers", group }, {
+//       request,
+//     }],
+//   ),
+//   where: async (frames) => {
+//     // Resolve member IDs to full user objects so frontend gets User[] in one
+//     // request. Use frames.query with an input mapping for `group` so each
+//     // incoming frame's bound `group` value is available.
+//     frames = await frames.query(
+//       async ({ group }) => {
+//         const ids = await Group._listMembers({ group });
+//         console.log("ids", ids);
+//         const users: Record<string, unknown>[] = [];
+//         for (const id of ids) {
+//           const r = await Authentication._getUserById({
+//             user: String(id) as unknown as ID,
+//           });
+//           const rr = r as {
+//             userInfo?: Record<string, unknown>;
+//             error?: string;
+//           };
+//           if (rr.userInfo) users.push(rr.userInfo);
+//         }
 
-        return [{ members: users }];
-      },
-      { group },
-      { members },
-    );
+//         return [{ members: users }];
+//       },
+//       { group },
+//       { members },
+//     );
 
-    return frames;
-  },
-  then: actions(
-    [Requesting.respond, { request, members }],
-  ),
-});
+//     return frames;
+//   },
+//   then: actions(
+//     [Requesting.respond, { request, members }],
+//   ),
+// });
 
 export const LeaveGroupRequest: Sync = (
   { request, group, member, token },
