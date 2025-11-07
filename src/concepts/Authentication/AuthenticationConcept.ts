@@ -141,6 +141,7 @@ export default class AuthenticationConcept {
     user: User;
     token: string;
   }): Promise<{ user: User } | { error: string }> {
+    console.log("Hello??");
     const foundUser = await this.users.findOne({ _id: user, token: token });
     // console.log(`ABout toValidated token for user: ${foundUser.username}`);
     console.log("HIII VALIDATE", token, user);
