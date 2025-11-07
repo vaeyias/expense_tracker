@@ -75,7 +75,7 @@ export const AddUserSplitResponse: Sync = (
   ),
   then: user !== payer
     ? actions(
-      [Debt.updateDebt, { payer, user, amountOwed }],
+      [Debt.updateDebt, { payer, receiver: user, amountOwed }],
       [Requesting.respond, { request }],
     )
     : actions(
