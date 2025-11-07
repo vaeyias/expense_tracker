@@ -3,7 +3,7 @@
 ## Overall Experience
 Using agentic AI tools like **Copilot**, **Cursor**, and **Gemini LLM** made implementing my website much easier, though each tool came with its own challenges. These tools definitely helped me accelerate development and handle repetitive tasks but also required careful review and management.
 ## How Using Agentic AI Tools Helped
-- AI tools made implementing more complex features like formulating all my syncs a lot easier. Even if it didn't give me working code, it gave me a nice foundation to build off of.
+- AI tools made implementing more complex features like formulating all my syncs a lot easier. Even if it didn't give me working code, it gave me a nice foundation to build off of. For example, when implementing my concepts, the generated code never matched what I intended for my concepts, but with the initial generated code, I could more easily modify the code to fit my vision.
 - Could implement tedious/repetitive code quickly, such as applying a styling change to components across multiple files.
 - AI tools enabled me to implement complicated features I probably would have struggled with/or taken a lot of time to implement. For example, implementing a confetti animation after a user records a payment.
 

@@ -11,7 +11,7 @@ import { ID } from "@utils/types.ts";
 
 /* ---------- EXPENSE: ADD USER SPLIT (WITH DEBT UPDATE) ---------- */
 export const AddUserSplitRequest: Sync = (
-  { request, expense, creator, user, amountOwed, token },
+  { request, expense, creator, user, payer, amountOwed, token },
 ) => ({
   when: actions(
     [Requesting.request, {
@@ -19,6 +19,7 @@ export const AddUserSplitRequest: Sync = (
       expense,
       user,
       creator,
+      payer,
       amountOwed,
       token,
     }, { request }],
@@ -29,7 +30,7 @@ export const AddUserSplitRequest: Sync = (
 });
 
 export const AddUserSplitValidate: Sync = (
-  { request, expense, creator, user, amountOwed, token },
+  { request, expense, creator, payer, user, amountOwed, token },
 ) => ({
   when: actions(
     [Requesting.request, {
@@ -37,6 +38,7 @@ export const AddUserSplitValidate: Sync = (
       expense,
       user,
       creator,
+      payer,
       amountOwed,
       token,
     }, { request }],
@@ -65,6 +67,7 @@ export const AddUserSplitResponse: Sync = (
       path: "/Expense/addUserSplit",
       expense,
       user,
+      payer,
       creator,
       amountOwed,
       token,
@@ -800,7 +803,7 @@ export const EditExpenseRequest: Sync = (
     }, { request }],
   ),
   then: actions(
-    [Authentication.validateToken, { user: user, token: token }],
+    [Authentication.validateToken, { user, token }],
   ),
 });
 

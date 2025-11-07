@@ -1,4 +1,4 @@
-# Design Log and Reflections!
+# Design Log Notes and Reflections!
 
 ## Index
 
@@ -32,11 +32,16 @@
 - In Assignment 2, I did not explicit define my User concept. In my implementation here, I implement a User concept.
 - *See concept-specific design logs for other design changes.*
 
-# Changes in backend when implemetning Assignment 4b
+# Changes after Assignment 4a
 - No major concept design changes
 - Mostly additions of new queries to complete features of the frontend
   - For example, query getting all subfolders of a folder.
 
+
+# Changes after Assignment 4b
+- Added a token and validate token in Authentication concept in order to validate that the current user is authorized to peform certain actions.
+- add syncs between concepts
+- No other major changes.
 ## Interesting Moments
 
 ### 1. LLM Concept Implementation Throwing Errors Instead of Returning Them

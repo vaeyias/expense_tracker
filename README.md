@@ -1,7 +1,15 @@
 # Index
 
-### **Interesting Moments and Major Design Changes:**
-- [Main Design Document](design/designDoc.md)
+
+### **Final Design Dcoument:**
+- [Final Design Document](design/finalDesignDoc.md)
+
+### **Screen Recording**
+- [Screen Recording of Deployed App]()
+
+- [Associated Trace of Incoming Actions]()
+### Interesting Moments and Design Change Notes
+- [Interesting Moments](design/designDocNotes.md)
 
 ---
 ### **Design Logs for Specific Concepts**
@@ -15,7 +23,7 @@
 
 - [Folder Design Log](design/concepts/Folder/designLog.md)
 
-- [User Design Log](design/concepts/User/designLog.md)
+- [Authentication Design Log](design/concepts/Authentication/designLog.md)
 ---
 
 ###  Where to find...
