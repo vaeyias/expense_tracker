@@ -58,8 +58,6 @@ export const AddUserSplitResponse: Sync = (
     amountOwed,
     token,
     payer,
-    receiver,
-    amount,
   },
 ) => ({
   when: actions(
@@ -75,35 +73,35 @@ export const AddUserSplitResponse: Sync = (
     [Authentication.validateToken, { user: creator, token }, { user: creator }],
     [Expense.addUserSplit, {}, {}],
   ),
-  where: async (frames) => {
-    // Fetch expense to get payer, then update debt for this split
-    frames = await frames.query(
-      async ({ expense: expenseId, user: userId, amountOwed: owed }) => {
-        const exp = await Expense._getExpenseById({
-          expenseId: expenseId as unknown as ID,
-        });
-        const payerId = exp?.payer as ID | undefined;
-        if (!payerId) return [];
+  // where: async (frames) => {
+  //   // Fetch expense to get payer, then update debt for this split
+  //   frames = await frames.query(
+  //     async ({ expense: expenseId, user: userId, amountOwed: owed }) => {
+  //       const exp = await Expense._getExpenseById({
+  //         expenseId: expenseId as unknown as ID,
+  //       });
+  //       const payerId = exp?.payer as ID | undefined;
+  //       if (!payerId) return [];
 
-        // The user in the split is the receiver (they owe the payer)
-        return [{
-          payer: payerId,
-          receiver: userId as unknown as ID,
-          amount: owed as number,
-        }];
-      },
-      {
-        expense: expense as unknown as ID,
-        user: user as unknown as ID,
-        amountOwed: amountOwed as unknown as number,
-      },
-      { payer, receiver, amount },
-    );
+  //       // The user in the split is the receiver (they owe the payer)
+  //       return [{
+  //         payer: payerId,
+  //         receiver: userId as unknown as ID,
+  //         amount: owed as number,
+  //       }];
+  //     },
+  //     {
+  //       expense: expense as unknown as ID,
+  //       user: user as unknown as ID,
+  //       amountOwed: amountOwed as unknown as number,
+  //     },
+  //     { payer, receiver, amount },
+  //   );
 
-    return frames;
-  },
+  //   return frames;
+  // },
   then: actions(
-    [Debt.updateDebt, { payer, receiver, amount }],
+    [Debt.updateDebt, { payer, user, amountOwed }],
     [Requesting.respond, { request }],
   ),
 });
