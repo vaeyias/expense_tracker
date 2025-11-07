@@ -202,8 +202,6 @@ export default class GroupConcept {
       return [];
     }
 
-    console.log(groupDoc.members);
-
     return await groupDoc.members;
   }
 

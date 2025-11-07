@@ -54,7 +54,6 @@ export default class FolderConcept {
       return { error: "Owner and folder name are required." };
     }
 
-    console.log("CREAITN FOLDER");
     const existingFolder = await this.folders.findOne({ owner, name });
     if (existingFolder) {
       return {

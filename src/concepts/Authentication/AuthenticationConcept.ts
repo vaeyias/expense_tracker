@@ -44,7 +44,6 @@ export default class AuthenticationConcept {
     if (existingUser) {
       return { error: "Username already exists." };
     }
-    console.log("Creating user with username:", username);
 
     const newUser = {
       _id: freshID(),
@@ -130,10 +129,6 @@ export default class AuthenticationConcept {
   /**
    * Validate a token for a given user
    */
-
-  async testingSomething() {
-    console.log("Hello world");
-  }
   async validateToken({
     user,
     token,
@@ -141,13 +136,9 @@ export default class AuthenticationConcept {
     user: User;
     token: string;
   }): Promise<{ user: User } | { error: string }> {
-    console.log("Hello??");
     const foundUser = await this.users.findOne({ _id: user, token: token });
-    // console.log(`ABout toValidated token for user: ${foundUser.username}`);
-    console.log("HIII VALIDATE", token, user);
 
     if (!foundUser) return { error: "User not authenticated. Please log in." };
-    console.log(`Validated token for user: ${foundUser.username}`);
     return { user: foundUser._id };
   }
 
