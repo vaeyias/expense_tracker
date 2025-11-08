@@ -4,6 +4,8 @@
 ### **Final Design Dcoument:**
 - [Final Design Document](design/finalDesignDoc.md)
 
+### Reflection
+- [Reflection](design/reflection.md)
 ### **Screen Recording**
 - [Screen Recording of Deployed App](https://drive.google.com/file/d/14C4XBk6-7Koz2D1Ruxk1XOLh2Msxu39U/view?usp=sharing)
 
