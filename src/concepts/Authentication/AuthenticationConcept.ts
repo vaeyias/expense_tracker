@@ -74,7 +74,7 @@ export default class AuthenticationConcept {
     const validation = await this.validateToken({ user, token });
     if ("error" in validation) return { error: "Invalid token." };
 
-    const result = await this.users.findOneAndUpdate(
+    const result = await this.users.updateOne(
       { _id: user },
       { $set: { displayName: newDisplayName } },
     );

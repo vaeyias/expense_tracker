@@ -379,6 +379,7 @@ export const EditExpenseValidate: Sync = (
       newExpense: expenseToEdit,
       totalCost,
       token,
+      description,
       date,
       payer,
       category,
