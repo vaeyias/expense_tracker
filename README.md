@@ -5,9 +5,9 @@
 - [Final Design Document](design/finalDesignDoc.md)
 
 ### **Screen Recording**
-- [Screen Recording of Deployed App]()
+- [Screen Recording of Deployed App](media/vid.mp4)
 
-- [Associated Trace of Incoming Actions]()
+- [Associated Trace of Incoming Actions](design/trace.md)
 ### Interesting Moments and Design Change Notes
 - [Interesting Moments](design/designDocNotes.md)
 
